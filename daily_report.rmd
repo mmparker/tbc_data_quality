@@ -132,11 +132,11 @@ action_cxrs <- sqlQuery(plus, "
 action_cxrs$cxr_date_taken <- as.Date(action_cxrs$cxr_date_taken)
 
 # There are a lot of CXRs with action_required = NA; we only need to address
-# those in the last sixty days
+# those in the last year
 action_cxrs_recent <- subset(action_cxrs,
                              action_required %in% "Yes" |
                              (is.na(action_cxrs$action_required) & 
-                              action_cxrs$cxr_date_taken >= (Sys.Date() - 60)))
+                              action_cxrs$cxr_date_taken >= (Sys.Date() - 365)))
 
 dfprint(action_cxrs_recent)
 
