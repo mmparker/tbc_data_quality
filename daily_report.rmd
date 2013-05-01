@@ -1,0 +1,173 @@
+
+
+
+
+<style type="text/css">
+
+body {
+  padding-bottom: 20%;
+}
+
+table {
+  border: 1px solid #808080;
+  border-collapse: collapse;
+}
+
+th {
+  background-color: #1F78B4;
+  color: #FFFFFF;
+  border: 1px solid #808080;
+  padding-right: 20px;
+  padding-left: 20px;
+}
+
+td {
+  border: 1px solid #808080;
+  padding-right: 20px;
+  padding-left: 20px;
+}
+
+.maintitle {
+  text-align: left;
+  padding-top: 0px;
+}
+
+h2 {
+  text-align: left;
+  padding-top: 80px;
+}
+
+h3, h4 {
+  padding-top: 30px;
+}
+
+hr {
+  border: 0;
+  height: 1px;
+  background: #333;
+  background-image: -webkit-linear-gradient(left, #ccc, #333, #ccc); 
+  background-image:    -moz-linear-gradient(left, #ccc, #333, #ccc); 
+  background-image:     -ms-linear-gradient(left, #ccc, #333, #ccc); 
+  background-image:      -o-linear-gradient(left, #ccc, #333, #ccc); 
+}
+
+</style>
+
+
+
+```{r setup, echo= FALSE, warning= FALSE}
+
+# Strings ain't factors
+options(stringsAsFactors = FALSE)
+
+# Load the required libraries
+library(knitr)
+library(xtable)
+library(RODBC)
+
+
+# Set default chunk options
+opts_chunk$set(echo = FALSE,
+               results = 'asis',
+               message = FALSE,
+               warning = FALSE,
+               error = TRUE)
+
+
+# Set up default print arguments for printing tables:
+# xtable() makes data.frames more suitable for display
+# format() converts all of the data.frame comments to character*;
+# print() writes the xtable object to HTML
+
+# *print() for xtable throws a tantrum over Date and POSIXct variables,
+# so they have to be converted to character before printing 
+
+dfprint <- function(df, printdigits = 2) {
+    print(
+        xtable(format(df, 
+                      na.encode = FALSE, 
+                      digits = printdigits, 
+                      nsmall = printdigits), 
+               align = c("l", "l", rep("c", ncol(df) - 1))
+        ),
+        type = "html",
+        include.rownames = FALSE,
+        NA.string = "-")
+}
+
+
+
+# Set up the database connection
+plus <- odbcConnect("tbdbplus64")
+
+
+
+```
+
+
+
+# TB Clinic Data QA Report
+Updated at `r paste(Sys.time())`
+
+
+
+
+## CXRs Requiring Action
+```{r action_cxrs}
+
+# Query the CXRs with action required from TBdb
+action_cxrs <- sqlQuery(plus, "
+    
+    SELECT x.cxr_id, x.person_id, x.cxr_date_taken, x.cxr_date_read,
+           x.cxr_read_by, x.cxr_action_text, x.action_required
+    FROM CXR_View x LEFT OUTER JOIN TB_Case c
+    ON x.person_id = c.person_id
+    WHERE c.agency_id = 30
+        AND (x.action_required = 'Yes' OR x.action_required Is Null)
+    ORDER BY x.cxr_action_text, x.cxr_date_taken
+                         
+")
+
+# Convert cxr_date_taken to Date
+action_cxrs$cxr_date_taken <- as.Date(action_cxrs$cxr_date_taken)
+
+# There are a lot of CXRs with action_required = NA; we only need to address
+# those in the last sixty days
+action_cxrs_recent <- subset(action_cxrs,
+                             action_required %in% "Yes" |
+                             (is.na(action_cxrs$action_required) & 
+                              action_cxrs$cxr_date_taken >= (Sys.Date() - 60)))
+
+dfprint(action_cxrs_recent)
+
+
+```
+
+
+
+
+## Missed LTBI Pickups in the Last Two Weeks
+
+
+
+## Suspects Open for More Than 90 Days
+
+
+
+
+
+
+
+
+
+
+```{r cleanup}
+
+# Close the database connection
+odbcClose(plus)
+
+
+```
+
+
+
