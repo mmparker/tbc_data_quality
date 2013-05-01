@@ -151,6 +151,37 @@ dfprint(action_cxrs_recent)
 
 
 ## Suspects Open for More Than 90 Days
+```{r overdue_suspects}
+
+# Query the Case Info records of suspects associated with our clinic
+# Ignore any with a status set before 2007
+suspects <- sqlQuery(plus, "
+
+    SELECT person_id,
+           case_status,
+           current_status, 
+           current_status_date,
+  	       DATE() - current_status_date AS days_since_status,
+		       case_manager
+    FROM Case_Info_View
+    WHERE current_status = '(Class 5 ) TB Suspect'
+        AND case_manager Is Not Null 
+        AND agency IN ('Denver Public Health - Metro TB Clinic', 'Select One')
+        AND current_status_date > #2007-01-01#
+    ORDER BY case_manager, current_status_date
+                      
+")
+
+# Convert that dt to a date
+suspects$current_status_date <- as.Date(suspects$current_status_date)
+
+# Subset to suspects over 90 days
+suspects90 <- suspects[suspects$days_since_status > 90, ]
+
+
+dfprint(suspects90)
+
+```
 
 
 
