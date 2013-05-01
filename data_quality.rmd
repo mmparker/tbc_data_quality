@@ -1,58 +1,9 @@
 
 
 
-
-<style type="text/css">
-
-body {
-  padding-bottom: 20%;
-}
-
-table {
-  border: 1px solid #808080;
-  border-collapse: collapse;
-}
-
-th {
-  background-color: #1F78B4;
-  color: #FFFFFF;
-  border: 1px solid #808080;
-  padding-right: 20px;
-  padding-left: 20px;
-}
-
-td {
-  border: 1px solid #808080;
-  padding-right: 20px;
-  padding-left: 20px;
-}
-
-.maintitle {
-  text-align: left;
-  padding-top: 0px;
-}
-
-h2 {
-  text-align: left;
-  padding-top: 80px;
-}
-
-h3, h4 {
-  padding-top: 30px;
-}
-
-hr {
-  border: 0;
-  height: 1px;
-  background: #333;
-  background-image: -webkit-linear-gradient(left, #ccc, #333, #ccc); 
-  background-image:    -moz-linear-gradient(left, #ccc, #333, #ccc); 
-  background-image:     -ms-linear-gradient(left, #ccc, #333, #ccc); 
-  background-image:      -o-linear-gradient(left, #ccc, #333, #ccc); 
-}
-
-</style>
-
+<head>
+<link rel="stylesheet" type="text/css" href="../css/tb_report.css">
+</head>
 
 
 ```{r setup, echo= FALSE, warning= FALSE}
@@ -106,9 +57,16 @@ plus <- odbcConnect("tbdbplus64")
 
 
 
-# TB Clinic Data QA Report
+# TB Clinic Data Quality Report
 Updated at `r paste(Sys.time())`
 
+
+
+## Visits with No Location
+
+
+
+## Addresses with No County
 
 
 
