@@ -15,6 +15,7 @@ options(stringsAsFactors = FALSE)
 library(knitr)
 library(xtable)
 library(RODBC)
+library(plyr)
 
 
 # Set default chunk options
@@ -66,6 +67,114 @@ if(interactive()) {
 Updated at `r paste(Sys.time())`
 
 
+
+## Treatment Plan/Classification Mismatch
+
+
+## Patients with 2 or More Open Treatment Plans
+```{r multiplan}
+
+# Query the open plans by person_id
+open_plans <- sqlQuery(plus, "
+                      
+    SELECT person_id, treat_plan, treat_plan_date, plan_status
+    FROM Tx_Plan_View
+    WHERE plan_status = 'Open'
+        AND author_affiliation = 'Denver Metro TB Clinic'
+                      
+")
+
+# Identify any person with multiple plans
+multiplan_ids <- open_plans$person_id[duplicated(open_plans$person_id)]
+multiplans <- subset(open_plans, person_id %in% multiplan_ids)
+
+dfprint(arrange(multiplans, person_id, treat_plan_date))
+
+
+```
+
+
+## Treatment Plans Open Longer Than Expected
+```{r plans_open_longer}
+
+# Query the treatment plans
+plans <- sqlQuery(plus, "
+                  
+    SELECT person_id, plan_author, treat_plan_date,
+           treat_plan_type, ltbi_drug,
+           latest_tx, plan_status, reason_stopped
+    FROM Tx_Plan_View
+    WHERE author_affiliation = 'Denver Metro TB Clinic'
+        AND plan_status = 'Open'
+                  
+")
+
+# Convert treat_plan_date to Date
+plans$treat_plan_date <- as.Date(plans$treat_plan_date)
+
+# Calculate how long each plan has been open
+plans$days_open <- Sys.Date() - plans$treat_plan_date
+
+# Flag those that have been open too long
+# Rifampin - more than 4 months
+# INH - more than 9 months
+# INH/Rifapentine - more than 12 weeks
+# Active - more than 12 months
+plans$open_too_long <- FALSE
+plans$open_too_long[plans$ltbi_drug %in% "RIF" & plans$days_open > 124] <- TRUE
+plans$open_too_long[plans$ltbi_drug %in% "INH" & plans$days_open > 279] <- TRUE
+plans$open_too_long[plans$ltbi_drug %in% "INH/Rifapentine" & plans$days_open > 84] <- TRUE
+plans$open_too_long[plans$ltbi_drug %in% "INH" & plans$days_open > 365] <- TRUE
+
+open_too_long <- subset(plans,
+                        subset = open_too_long,
+                        select = c("person_id", "plan_author",
+                                   "treat_plan_type", "ltbi_drug",
+                                   "treat_plan_date", "latest_tx",
+                                   "plan_status", "reason_stopped", "days_open"))
+
+
+
+dfprint(arrange(open_too_long, plan_author, treat_plan_type, ltbi_drug, desc(days_open)))
+
+
+
+```
+
+
+## Treatment Plans Closed Without Reason or End Date
+```{r closed_without}
+
+
+# Query the treatment plans
+# Every plan should have a reason stopped. They should all have a treatment ending date,
+# too, but to keep this list to a reasonable length I'll only pull completed plans that are
+# missing end dates.
+plans <- sqlQuery(plus, "
+                  
+    SELECT person_id, plan_author, treat_plan_date,
+           treat_plan, plan_status, reason_stopped,
+           treat_plan_end
+    FROM Tx_Plan_View
+    WHERE author_affiliation = 'Denver Metro TB Clinic'
+        AND plan_status = 'Closed'
+        AND (reason_stopped = 'Select One'
+             OR (reason_stopped = 'Course Completed'
+                 AND treat_plan_end Is Null
+             )
+        )
+    ORDER BY plan_author, treat_plan_date
+                  
+")
+
+
+dfprint(plans)
+
+
+```
+
+
+## Open Treatment Plans with Reason Stopped or End Date
 
 
 ## Incomplete LTBI Pickups in the Past Fourteen Days
