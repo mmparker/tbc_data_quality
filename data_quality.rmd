@@ -349,7 +349,7 @@ tsts_no_result <- sqlQuery(plus, "
                  
 ")
 
-dfprint(tsts_no_result)
+dfprint(subset(tsts_no_result, as.Date(date_given) < (Sys.Date() - 3)))
 
 
 ```
@@ -373,9 +373,12 @@ qfts_no_result$date_collected <- as.Date(qfts_no_result$collection_date,
                                          format = "%m/%d/%Y")
 
 
-dfprint(qfts_no_result[order(qfts_no_result$date_collected), 
-                       !names(qfts_no_result) %in% "collection_date"]
+qfts_no_result_print <- subset(qfts_no_result,
+                               subset = date_collected < (Sys.Date() - 2),
+                               select = !names(qfts_no_result) %in% "collection_date"
 )
+
+dfprint(arrange(qfts_no_result_print, date_collected))
 
 
 ```
