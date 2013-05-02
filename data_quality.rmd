@@ -143,6 +143,7 @@ dfprint(arrange(multiplans, person_id, treat_plan_date))
 ```{r plans_open_longer}
 
 # Query the treatment plans
+# Exclude plans prior to 2008
 long_plans <- sqlQuery(plus, "
                   
     SELECT person_id, plan_author, treat_plan_date,
@@ -151,6 +152,7 @@ long_plans <- sqlQuery(plus, "
     FROM Tx_Plan_View
     WHERE author_affiliation = 'Denver Metro TB Clinic'
         AND plan_status = 'Open'
+        AND treat_plan_date > #2008-01-01#
                   
 ")
 
@@ -175,7 +177,7 @@ long_plans$open_too_long[long_plans$ltbi_drug %in% "INH" &
 long_plans$open_too_long[long_plans$ltbi_drug %in% "INH/Rifapentine" & 
                              long_plans$days_open > 84] <- TRUE
 
-long_plans$open_too_long[long_plans$ltbi_drug %in% "INH" & 
+long_plans$open_too_long[long_plans$treat_plan_type %in% "Active" & 
                              long_plans$days_open > 365] <- TRUE
 
 open_too_long <- subset(long_plans,
