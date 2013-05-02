@@ -104,7 +104,7 @@ dfprint(action_cxrs_recent)
 
 
 
-## Incomplete LTBI Pickups in the Fourteen Days
+## Incomplete LTBI Pickups in the Past Fourteen Days
 ```{r missed_pickups}
 
 # Query the missed LTBI pickups from the last fourteen days
