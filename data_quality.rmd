@@ -69,6 +69,51 @@ Updated at `r paste(Sys.time())`
 
 
 ## Treatment Plan/Classification Mismatch
+```{r plan_class_mismatch}
+
+# Pull open plans
+plantypes <- sqlQuery(plus, "
+                  
+    SELECT t.person_id, c.current_class,  t.treat_plan_type, 
+           t.treat_plan_date, t.plan_author, t.plan_status
+    FROM Tx_Plan_View t LEFT OUTER JOIN Case_Info_View c
+    ON t.person_id = c.person_id
+    WHERE t.plan_status = 'Open'
+        AND author_affiliation = 'Denver Metro TB Clinic'
+                      
+")
+
+# Flag discordant class/plans
+plantypes$discordant <- FALSE
+
+# Any treatment plan for the uninfected
+plantypes$discordant[plantypes$current_class %in% c("Class 0", "Class 1") &
+                     plantypes$treat_plan_type %in% c("LTBI", "Active")] <- TRUE
+
+# Active plans for LTBI+
+plantypes$discordant[plantypes$current_class %in% "Class 2" &
+                     plantypes$treat_plan_type %in% "Active"] <- TRUE
+
+# LTBI and Window plans for active cases and suspects
+plantypes$discordant[plantypes$current_class %in% c("Class 3", "Class 5") &
+                     plantypes$treat_plan_type %in% c("LTBI", "Window")] <- TRUE
+
+
+#count(plantypes, c("current_class", "treat_plan_type", "discordant"))
+
+
+discordant <- subset(plantypes,
+                     subset = discordant,
+                     select = c("person_id", "current_class", "treat_plan_type", 
+                                "treat_plan_date", "plan_author", "plan_status")
+)
+
+
+dfprint(arrange(discordant, current_class, treat_plan_type))
+
+
+
+```
 
 
 ## Patients with 2 or More Open Treatment Plans
