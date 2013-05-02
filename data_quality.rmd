@@ -143,7 +143,7 @@ dfprint(arrange(multiplans, person_id, treat_plan_date))
 ```{r plans_open_longer}
 
 # Query the treatment plans
-plans <- sqlQuery(plus, "
+long_plans <- sqlQuery(plus, "
                   
     SELECT person_id, plan_author, treat_plan_date,
            treat_plan_type, ltbi_drug,
@@ -155,23 +155,30 @@ plans <- sqlQuery(plus, "
 ")
 
 # Convert treat_plan_date to Date
-plans$treat_plan_date <- as.Date(plans$treat_plan_date)
+long_plans$treat_plan_date <- as.Date(long_plans$treat_plan_date)
 
 # Calculate how long each plan has been open
-plans$days_open <- Sys.Date() - plans$treat_plan_date
+long_plans$days_open <- Sys.Date() - long_plans$treat_plan_date
 
 # Flag those that have been open too long
 # Rifampin - more than 4 months
 # INH - more than 9 months
 # INH/Rifapentine - more than 12 weeks
 # Active - more than 12 months
-plans$open_too_long <- FALSE
-plans$open_too_long[plans$ltbi_drug %in% "RIF" & plans$days_open > 124] <- TRUE
-plans$open_too_long[plans$ltbi_drug %in% "INH" & plans$days_open > 279] <- TRUE
-plans$open_too_long[plans$ltbi_drug %in% "INH/Rifapentine" & plans$days_open > 84] <- TRUE
-plans$open_too_long[plans$ltbi_drug %in% "INH" & plans$days_open > 365] <- TRUE
+long_plans$open_too_long <- FALSE
+long_plans$open_too_long[long_plans$ltbi_drug %in% "RIF" & 
+                             long_plans$days_open > 124] <- TRUE
 
-open_too_long <- subset(plans,
+long_plans$open_too_long[long_plans$ltbi_drug %in% "INH" & 
+                             long_plans$days_open > 279] <- TRUE
+
+long_plans$open_too_long[long_plans$ltbi_drug %in% "INH/Rifapentine" & 
+                             long_plans$days_open > 84] <- TRUE
+
+long_plans$open_too_long[long_plans$ltbi_drug %in% "INH" & 
+                             long_plans$days_open > 365] <- TRUE
+
+open_too_long <- subset(long_plans,
                         subset = open_too_long,
                         select = c("person_id", "plan_author",
                                    "treat_plan_type", "ltbi_drug",
@@ -195,7 +202,7 @@ dfprint(arrange(open_too_long, plan_author, treat_plan_type, ltbi_drug, desc(day
 # Every plan should have a reason stopped. They should all have a treatment ending date,
 # too, but to keep this list to a reasonable length I'll only pull completed plans that are
 # missing end dates.
-plans <- sqlQuery(plus, "
+closed_without <- sqlQuery(plus, "
                   
     SELECT person_id, plan_author, treat_plan_date,
            treat_plan, plan_status, reason_stopped,
