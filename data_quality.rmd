@@ -478,7 +478,33 @@ dfprint(enc)
 
 
 ## Addresses with No County
+```{r no_county}
 
+# Query addresses with no county indicated
+# Ignore the really old ones
+# Colorado cities only
+no_county <- sqlQuery(plus, "
+                      
+    SELECT a.person_id, a.address, a.city, d.county,
+           a.updated_by, a.updated_date
+    FROM Addresses a LEFT OUTER JOIN Def_county d
+    ON a.county = d.county_of_residence
+    WHERE (d.county = 'Unknown'
+           OR d.county Is Null)
+        AND a.updated_date > #2010-01-01#
+        AND a.state = 'CO'
+        AND a.updated_by IN (
+            SELECT staff_userid
+            FROM Def_staff
+            WHERE affiliation = 'Denver Metro TB Clinic'
+            )
+    ORDER BY a.updated_by, a.updated_date
+
+")
+
+dfprint(no_county)
+
+```
 
 
 
