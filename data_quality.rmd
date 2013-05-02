@@ -62,75 +62,6 @@ Updated at `r paste(Sys.time())`
 
 
 
-## Encounters with No Staff Responsible
-
-
-
-## Unread TSTs
-
-
-## Visits with No Location
-```{r no_location}
-
-# Query encounters with visit_location = 0 ("Select One").
-# Only pull face-to-face encounters - that's eval_category = 'Clinical'
-# Ignore the NAs - those are imported records that predate TBdb.
-enc <- sqlQuery(plus, "
-                
-    SELECT person_id, eval_date, staff_responsible
-    FROM Eval_View
-    WHERE visit_location = 'Select One'
-        AND eval_category = 'Clinical'
-        AND eval_date >= #2011-01-01#
-        AND staff_affiliation = 'Denver Metro TB Clinic'
-    ORDER BY staff_responsible, eval_date
-                
-")
-
-dfprint(enc)
-
-
-```
-
-
-
-## Addresses with No County
-
-
-
-## CXRs Requiring Action
-```{r action_cxrs}
-
-# Query the CXRs with action required from TBdb
-action_cxrs <- sqlQuery(plus, "
-    
-    SELECT x.cxr_id, x.person_id, x.cxr_date_taken, x.cxr_date_read,
-           x.cxr_read_by, x.cxr_action_text, x.action_required
-    FROM CXR_View x LEFT OUTER JOIN TB_Case c
-    ON x.person_id = c.person_id
-    WHERE c.agency_id = 30
-        AND (x.action_required = 'Yes' OR x.action_required Is Null)
-    ORDER BY x.cxr_action_text, x.cxr_date_taken
-                         
-")
-
-# Convert cxr_date_taken to Date
-action_cxrs$cxr_date_taken <- as.Date(action_cxrs$cxr_date_taken)
-
-# There are a lot of CXRs with action_required = NA; we only need to address
-# those in the last year
-action_cxrs_recent <- subset(action_cxrs,
-                             action_required %in% "Yes" |
-                             (is.na(action_cxrs$action_required) & 
-                              action_cxrs$cxr_date_taken >= (Sys.Date() - 365)))
-
-dfprint(action_cxrs_recent)
-
-
-```
-
-
-
 
 ## Incomplete LTBI Pickups in the Past Fourteen Days
 ```{r missed_pickups}
@@ -169,7 +100,7 @@ suspects <- sqlQuery(plus, "
            case_status,
            current_status, 
            current_status_date,
-  	       DATE() - current_status_date AS days_since_status,
+             DATE() - current_status_date AS days_since_status,
 		       case_manager
     FROM Case_Info_View
     WHERE current_status = '(Class 5 ) TB Suspect'
@@ -207,6 +138,90 @@ suspects_to_close <- suspects[suspects$to_close, !names(suspects) %in% "to_close
 dfprint(suspects_to_close)
 
 ```
+
+
+
+
+
+## TSTs with Missing Results
+
+
+## QFTs with Missing Results
+
+
+## CXRs Requiring Action
+```{r action_cxrs}
+
+# Query the CXRs with action required from TBdb
+action_cxrs <- sqlQuery(plus, "
+    
+    SELECT x.cxr_id, x.person_id, x.cxr_date_taken, x.cxr_date_read,
+           x.cxr_read_by, x.cxr_action_text, x.action_required
+    FROM CXR_View x LEFT OUTER JOIN TB_Case c
+    ON x.person_id = c.person_id
+    WHERE c.agency_id = 30
+        AND (x.action_required = 'Yes' OR x.action_required Is Null)
+    ORDER BY x.cxr_action_text, x.cxr_date_taken
+                         
+")
+
+# Convert cxr_date_taken to Date
+action_cxrs$cxr_date_taken <- as.Date(action_cxrs$cxr_date_taken)
+
+# There are a lot of CXRs with action_required = NA; we only need to address
+# those in the last year
+action_cxrs_recent <- subset(action_cxrs,
+                             action_required %in% "Yes" |
+                             (is.na(action_cxrs$action_required) & 
+                              action_cxrs$cxr_date_taken >= (Sys.Date() - 365)))
+
+dfprint(action_cxrs_recent)
+
+
+```
+
+
+
+
+
+
+## Encounters with No Staff Responsible
+
+
+
+
+
+
+## Visits with No Location
+```{r no_location}
+
+# Query encounters with visit_location = 0 ("Select One").
+# Only pull face-to-face encounters - that's eval_category = 'Clinical'
+# Ignore the NAs - those are imported records that predate TBdb.
+enc <- sqlQuery(plus, "
+                
+    SELECT person_id, eval_date, staff_responsible
+    FROM Eval_View
+    WHERE visit_location = 'Select One'
+        AND eval_category = 'Clinical'
+        AND eval_date >= #2011-01-01#
+        AND staff_affiliation = 'Denver Metro TB Clinic'
+    ORDER BY staff_responsible, eval_date
+                
+")
+
+dfprint(enc)
+
+
+```
+
+
+
+## Addresses with No County
+
+
+
+
 
 
 
