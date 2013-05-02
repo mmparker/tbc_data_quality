@@ -390,8 +390,8 @@ dfprint(arrange(qfts_no_result_print, date_collected))
 # Query the CXRs with action required from TBdb
 action_cxrs <- sqlQuery(plus, "
     
-    SELECT x.cxr_id, x.person_id, x.cxr_date_taken, x.cxr_date_read,
-           x.cxr_read_by, x.cxr_action_text, x.action_required
+    SELECT x.person_id, x.cxr_date_taken, x.cxr_date_read,
+           x.cxr_action_text, x.action_required
     FROM CXR_View x LEFT OUTER JOIN TB_Case c
     ON x.person_id = c.person_id
     WHERE c.agency_id = 30
@@ -406,9 +406,11 @@ action_cxrs$cxr_date_taken <- as.Date(action_cxrs$cxr_date_taken)
 # There are a lot of CXRs with action_required = NA; we only need to address
 # those in the last year
 action_cxrs_recent <- subset(action_cxrs,
-                             action_required %in% "Yes" |
-                             (is.na(action_cxrs$action_required) & 
-                              action_cxrs$cxr_date_taken >= (Sys.Date() - 365)))
+                             subset = action_required %in% "Yes" |
+                                      (is.na(action_cxrs$action_required) & 
+                                      action_cxrs$cxr_date_taken >= (Sys.Date() - 365)),
+                             select = !names(action_cxrs) %in% "action_required"
+)
 
 dfprint(action_cxrs_recent)
 
