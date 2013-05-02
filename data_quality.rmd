@@ -62,7 +62,37 @@ Updated at `r paste(Sys.time())`
 
 
 
+## Encounters with No Staff Responsible
+
+
+
+## Unread TSTs
+
+
 ## Visits with No Location
+```{r no_location}
+
+# Query encounters with visit_location = 0 ("Select One").
+# Ignore the NAs - those are imported records that predate TBdb.
+enc <- sqlQuery(plus, "
+                
+    SELECT person_id, eval_date, staff_responsible
+    FROM Medical_eval
+    WHERE visit_location = 0
+        AND eval_date >= #2011-01-01#
+        AND staff_responsible IN (
+            SELECT staff_name
+            FROM Def_staff
+            WHERE affiliation = 'Denver Metro TB Clinic'
+        )
+    ORDER BY staff_responsible, eval_date
+                
+")
+
+dfprint(enc)
+
+
+```
 
 
 
