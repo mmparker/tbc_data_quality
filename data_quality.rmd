@@ -144,9 +144,51 @@ dfprint(suspects_to_close)
 
 
 ## TSTs with Missing Results
+```{r tsts_missing_results}
+
+# Query TSTs either placed or read by our staff but without results
+# Disregard tests placed before 2009
+tsts_no_result <- sqlQuery(plus, "
+                 
+    SELECT person_id, date_given, date_read, tst_read_by, result
+    FROM TST_View
+    WHERE reader_affiliation = 'Denver Metro TB Clinic'
+        AND result = 'Select One'
+        AND date_given >= #2009-01-01#
+    ORDER BY tst_read_by, date_given
+                 
+")
+
+dfprint(tsts_no_result)
+
+
+```
 
 
 ## QFTs with Missing Results
+```{r qfts_missing_results}
+
+# Query the DPH QFTs
+qfts_no_result <- sqlQuery(plus, "
+                 
+    SELECT person_id, lab, collection_date, result
+    FROM QFT_View
+    WHERE lab = 'Denver Public Health'
+        AND result = 'Select One'
+                 
+")
+
+# Convert the collection date
+qfts_no_result$date_collected <- as.Date(qfts_no_result$collection_date, 
+                                         format = "%m/%d/%Y")
+
+
+dfprint(qfts_no_result[order(qfts_no_result$date_collected), 
+                       !names(qfts_no_result) %in% "collection_date"]
+)
+
+
+```
 
 
 ## CXRs Requiring Action
