@@ -220,13 +220,37 @@ closed_without <- sqlQuery(plus, "
 ")
 
 
-dfprint(plans)
+dfprint(closed_without)
 
 
 ```
 
 
 ## Open Treatment Plans with Reason Stopped or End Date
+```{r open_with}
+
+
+# Query the treatment plans
+# Every plan with a reason stopped or an end date should be closed
+open_with <- sqlQuery(plus, "
+                  
+    SELECT person_id, plan_author, treat_plan_date,
+           treat_plan, plan_status, reason_stopped,
+           treat_plan_end
+    FROM Tx_Plan_View
+    WHERE author_affiliation = 'Denver Metro TB Clinic'
+        AND plan_status = 'Open'
+        AND (reason_stopped <> 'Select One'
+             OR treat_plan_end Is Not Null)
+    ORDER BY plan_author, treat_plan_date
+                  
+")
+
+
+dfprint(arrange(open_with, reason_stopped))
+
+
+```
 
 
 ## Incomplete LTBI Pickups in the Past Fourteen Days
