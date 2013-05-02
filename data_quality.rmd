@@ -49,7 +49,12 @@ dfprint <- function(df, printdigits = 2) {
 
 
 # Set up the database connection
-plus <- odbcConnect("tbdbplus64")
+if(interactive()) { 
+    plus <- odbcConnect("tbdbplus64") 
+} else {
+    plus <- odbcConnect("tbdbplus32")
+}
+    
 
 
 
