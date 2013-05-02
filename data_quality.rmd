@@ -422,7 +422,28 @@ dfprint(action_cxrs_recent)
 
 
 
-## Encounters with No Staff Responsible
+## Clinical Encounters with No Staff Responsible
+```{r encounters_nostaff}
+
+# Query encounters with no staff responsible (clinical only - don't worry about admin)
+no_staff <- sqlQuery(plus, "
+                     
+    SELECT person_id, eval_date, eval_category, updated_by
+    FROM Eval_View
+    WHERE staff_responsible Is Null
+        AND eval_category = 'Clinical'
+        AND updated_by IN (
+            SELECT staff_userid
+            FROM Def_staff
+            WHERE affiliation = 'Denver Metro TB Clinic'
+            )
+    ORDER BY updated_by, eval_date
+                     
+")
+
+dfprint(no_staff)
+
+```
 
 
 
