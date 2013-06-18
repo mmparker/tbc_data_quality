@@ -13,7 +13,7 @@ options(stringsAsFactors = FALSE)
 
 # Load the required libraries
 library(knitr)
-library(xtable)
+library(mpmisc)
 library(RODBC)
 library(plyr)
 
@@ -26,17 +26,17 @@ opts_chunk$set(echo = FALSE,
                error = TRUE)
 
 
-# Source the data.frame pretty-printer
-source(file.path("..", "fun", "dfprint.r"))
-
-
 
 # Set up the database connection
+# One for the quarterly report functions, which take the odbc connection as a string
 if(interactive()) { 
-    plus <- odbcConnect("tbdbplus64") 
+    dbconnect <- "tbdbplus64"
 } else {
-    plus <- odbcConnect("tbdbplus32")
+    dbconnect <- "tbdbplus32"
 }
+
+# Another for queries that will expect an actual ODBC connection object
+plus <- connect_to_tbdbplus()
     
 
 
@@ -91,7 +91,8 @@ discordant <- subset(plantypes,
 )
 
 
-dfprint(arrange(discordant, current_class, treat_plan_type))
+dfprintif(arrange(discordant, current_class, treat_plan_type),
+          norowmsg = "All classifications and plans seem to match.")
 
 
 
@@ -115,7 +116,8 @@ open_plans <- sqlQuery(plus, "
 multiplan_ids <- open_plans$person_id[duplicated(open_plans$person_id)]
 multiplans <- subset(open_plans, person_id %in% multiplan_ids)
 
-dfprint(arrange(multiplans, person_id, treat_plan_date))
+dfprintif(arrange(multiplans, person_id, treat_plan_date),
+          norowmsg = "No patients have more than one open plan.")
 
 
 ```
@@ -171,7 +173,8 @@ open_too_long <- subset(long_plans,
 
 
 
-dfprint(arrange(open_too_long, plan_author, treat_plan_type, ltbi_drug, desc(days_open)))
+dfprintif(arrange(open_too_long, plan_author, treat_plan_type, ltbi_drug, desc(days_open)),
+          norowmsg = "No plans have been open longer than expected.")
 
 
 
@@ -204,7 +207,8 @@ closed_without <- sqlQuery(plus, "
 ")
 
 
-dfprint(closed_without)
+dfprintif(closed_without,
+          norowmsg = "All closed treatment plans have end dates and reasons stopped.")
 
 
 ```
@@ -231,7 +235,8 @@ open_with <- sqlQuery(plus, "
 ")
 
 
-dfprint(arrange(open_with, reason_stopped))
+dfprintif(arrange(open_with, reason_stopped),
+          norowmsg = "No open plans have end dates or reasons stopped.")
 
 
 ```
@@ -256,7 +261,8 @@ missed_pu <- sqlQuery(plus, paste("
 )
                                   
 
-dfprint(missed_pu)
+dfprintif(missed_pu,
+          norowmsg = "No LTBI pickups have been missed.")
 
 
 ```
@@ -309,7 +315,8 @@ suspects$to_close[suspects$current_status_date >= as.Date("2007-01-01") &
 suspects_to_close <- suspects[suspects$to_close, !names(suspects) %in% "to_close"]
 
 
-dfprint(suspects_to_close)
+dfprintif(suspects_to_close,
+          norowmsg = "No suspects have been open more than 90 days.")
 
 ```
 
@@ -333,7 +340,8 @@ tsts_no_result <- sqlQuery(plus, "
                  
 ")
 
-dfprint(subset(tsts_no_result, as.Date(date_given) < (Sys.Date() - 3)))
+dfprintif(subset(tsts_no_result, as.Date(date_given) < (Sys.Date() - 3)),
+          norowmsg = "No TSTs are missing results at this time.")
 
 
 ```
@@ -362,7 +370,8 @@ qfts_no_result_print <- subset(qfts_no_result,
                                select = !names(qfts_no_result) %in% "collection_date"
 )
 
-dfprint(arrange(qfts_no_result_print, date_collected))
+dfprintif(arrange(qfts_no_result_print, date_collected),
+          norowmsg = "No QFTs are missing results at this time.")
 
 
 ```
@@ -391,7 +400,8 @@ no_staff <- sqlQuery(plus, "
                      
 ")
 
-dfprint(no_staff)
+dfprintif(no_staff,
+          norowmsg = "All encounters have a staff person recorded.")
 
 ```
 
@@ -418,7 +428,8 @@ enc <- sqlQuery(plus, "
                 
 ")
 
-dfprint(enc)
+dfprintif(enc,
+          norowmsg = "All encounters have a location recorded.")
 
 
 ```
@@ -450,7 +461,8 @@ no_county <- sqlQuery(plus, "
 
 ")
 
-dfprint(no_county)
+dfprintif(no_county,
+          norowmsg = "All addresses have a county recorded.")
 
 ```
 
