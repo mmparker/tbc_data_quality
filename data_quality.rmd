@@ -27,7 +27,7 @@ opts_chunk$set(echo = FALSE,
 
 
 # Source the data.frame pretty-printer
-source("..//fun//dfprint.r")
+source(file.path("..", "fun", "dfprint.r"))
 
 
 
