@@ -2,7 +2,16 @@
 
 
 <head>
-<link rel="stylesheet" type="text/css" href="../css/tb_report.css">
+  <meta charset="utf-8" />
+  <link rel="stylesheet" type="text/css" href="../css/jquery-ui.css" />
+  <script src="http://code.jquery.com/jquery-1.9.1.js"></script>
+  <script src="http://code.jquery.com/ui/1.10.3/jquery-ui.js"></script>
+  <link rel="stylesheet" type="text/css" href="../css/tb_report.css" />
+  <script>
+  $(function() {
+    $( "#tabs" ).tabs();
+  });
+  </script>
 </head>
 
 
@@ -50,426 +59,462 @@ Updated at `r paste(Sys.time())`
 
 
 
-## Treatment Plan/Classification Mismatch
-```{r plan_class_mismatch}
+<div id="tabs">
+  <ul>
+    <li><a href="#txplans">Treatment</a></li>
+    <li><a href="#ptclass">Patient Classification</a></li>
+    <li><a href="#diagnostics">Diagnostics</a></li>
+    <li><a href="#encounters">Encounters</a></li>
+    <li><a href="#locating">Locating Info</a></li>
+  </ul>
+    
 
-# Pull open plans
-plantypes <- sqlQuery(plus, "
+  <div id="txplans">
+  
+  <h2>Treatment Plan/Classification Mismatch</h2>
+  ```{r plan_class_mismatch}
+  
+  # Pull open plans
+  plantypes <- sqlQuery(plus, "
+                    
+      SELECT t.person_id, c.current_class,  t.treat_plan_type, 
+             t.treat_plan_date, t.plan_author, t.plan_status
+      FROM Tx_Plan_View t LEFT OUTER JOIN Case_Info_View c
+      ON t.person_id = c.person_id
+      WHERE t.plan_status = 'Open'
+          AND author_affiliation = 'Denver Metro TB Clinic'
+                        
+  ")
+  
+  # Flag discordant class/plans
+  plantypes$discordant <- FALSE
+  
+  # Any treatment plan for the uninfected
+  plantypes$discordant[plantypes$current_class %in% c("Class 0", "Class 1") &
+                       plantypes$treat_plan_type %in% c("LTBI", "Active")] <- TRUE
+  
+  # Active plans for LTBI+
+  plantypes$discordant[plantypes$current_class %in% "Class 2" &
+                       plantypes$treat_plan_type %in% "Active"] <- TRUE
+  
+  # LTBI and Window plans for active cases and suspects
+  plantypes$discordant[plantypes$current_class %in% c("Class 3", "Class 5") &
+                       plantypes$treat_plan_type %in% c("LTBI", "Window")] <- TRUE
+  
+  
+  #count(plantypes, c("current_class", "treat_plan_type", "discordant"))
+  
+  
+  discordant <- subset(plantypes,
+                       subset = discordant,
+                       select = c("person_id", "current_class", "treat_plan_type", 
+                                  "treat_plan_date", "plan_author", "plan_status")
+  )
+  
+  
+  dfprintif(arrange(discordant, current_class, treat_plan_type),
+            norowmsg = "All classifications and plans seem to match.")
+  
+  
+  
+  ```
+  
+  
+  <h2>Patients with 2 or More Open Treatment Plans</h2>
+  ```{r multiplan}
+  
+  # Query the open plans by person_id
+  open_plans <- sqlQuery(plus, "
+                        
+      SELECT person_id, treat_plan, treat_plan_date, plan_status
+      FROM Tx_Plan_View
+      WHERE plan_status = 'Open'
+          AND author_affiliation = 'Denver Metro TB Clinic'
+                        
+  ")
+  
+  # Identify any person with multiple plans
+  multiplan_ids <- open_plans$person_id[duplicated(open_plans$person_id)]
+  multiplans <- subset(open_plans, person_id %in% multiplan_ids)
+  
+  dfprintif(arrange(multiplans, person_id, treat_plan_date),
+            norowmsg = "No patients have more than one open plan.")
+  
+  
+  ```
+  
+  
+  <h2>Treatment Plans Open Longer Than Expected</h2>
+  ```{r plans_open_longer}
+  
+  # Query the treatment plans
+  # Exclude plans prior to 2008
+  long_plans <- sqlQuery(plus, "
+                    
+      SELECT person_id, plan_author, treat_plan_date,
+             treat_plan_type, ltbi_drug,
+             latest_tx, plan_status, reason_stopped
+      FROM Tx_Plan_View
+      WHERE author_affiliation = 'Denver Metro TB Clinic'
+          AND plan_status = 'Open'
+          AND treat_plan_date > #2008-01-01#
+                    
+  ")
+  
+  # Convert treat_plan_date to Date
+  long_plans$treat_plan_date <- as.Date(long_plans$treat_plan_date)
+  
+  # Calculate how long each plan has been open
+  long_plans$days_open <- Sys.Date() - long_plans$treat_plan_date
+  
+  # Flag those that have been open too long
+  # Rifampin - more than 4 months
+  # INH - more than 9 months
+  # INH/Rifapentine - more than 12 weeks
+  # Active - more than 12 months
+  long_plans$open_too_long <- FALSE
+  long_plans$open_too_long[long_plans$ltbi_drug %in% "RIF" & 
+                               long_plans$days_open > 124] <- TRUE
+  
+  long_plans$open_too_long[long_plans$ltbi_drug %in% "INH" & 
+                               long_plans$days_open > 279] <- TRUE
+  
+  long_plans$open_too_long[long_plans$ltbi_drug %in% "INH/Rifapentine" & 
+                               long_plans$days_open > 84] <- TRUE
+  
+  long_plans$open_too_long[long_plans$treat_plan_type %in% "Active" & 
+                               long_plans$days_open > 365] <- TRUE
+  
+  open_too_long <- subset(long_plans,
+                          subset = open_too_long,
+                          select = c("person_id", "plan_author",
+                                     "treat_plan_type", "ltbi_drug",
+                                     "treat_plan_date", "latest_tx",
+                                     "plan_status", "reason_stopped", "days_open"))
+  
+  
+  
+  dfprintif(arrange(open_too_long, plan_author, treat_plan_type, ltbi_drug, desc(days_open)),
+            norowmsg = "No plans have been open longer than expected.")
+  
+  
+  
+  ```
+  
+  
+  <h2>Treatment Plans Closed Without Reason or End Date</h2>
+  ```{r closed_without}
+  
+  
+  # Query the treatment plans
+  # Every plan should have a reason stopped. They should all have a treatment ending date,
+  # too, but to keep this list to a reasonable length I'll only pull completed plans that are
+  # missing end dates.
+  closed_without <- sqlQuery(plus, "
+                    
+      SELECT person_id, plan_author, treat_plan_date,
+             treat_plan, plan_status, reason_stopped,
+             treat_plan_end
+      FROM Tx_Plan_View
+      WHERE author_affiliation = 'Denver Metro TB Clinic'
+          AND plan_status = 'Closed'
+          AND (reason_stopped = 'Select One'
+               OR (reason_stopped = 'Course Completed'
+                   AND treat_plan_end Is Null
+               )
+          )
+      ORDER BY plan_author, treat_plan_date
+                    
+  ")
+  
+  
+  dfprintif(closed_without,
+            norowmsg = "All closed treatment plans have end dates and reasons stopped.")
+  
+  
+  ```
+  
+  
+  <h2>Open Treatment Plans with Reason Stopped or End Date</h2>
+  ```{r open_with}
+  
+  
+  # Query the treatment plans
+  # Every plan with a reason stopped or an end date should be closed
+  open_with <- sqlQuery(plus, "
+                    
+      SELECT person_id, plan_author, treat_plan_date,
+             treat_plan, plan_status, reason_stopped,
+             treat_plan_end
+      FROM Tx_Plan_View
+      WHERE author_affiliation = 'Denver Metro TB Clinic'
+          AND plan_status = 'Open'
+          AND (reason_stopped <> 'Select One'
+               OR treat_plan_end Is Not Null)
+      ORDER BY plan_author, treat_plan_date
+                    
+  ")
+  
+  
+  dfprintif(arrange(open_with, reason_stopped),
+            norowmsg = "No open plans have end dates or reasons stopped.")
+  
+  
+  ```
+  
+  
+  <h2>Incomplete LTBI Pickups in the Past Fourteen Days</h2>
+  ```{r missed_pickups}
+  
+  # Query the missed LTBI pickups from the last fourteen days
+  missed_pu <- sqlQuery(plus, paste("
+                                    
+      SELECT t.person_id, p.last_name, p.first_name, t.treatment_date
+      FROM Drug_Treatment t LEFT OUTER JOIN Person p
+      ON t.person_id = p.idnumber
+      WHERE dispense_type = 'Pickup'
+          AND completed = ''
+          AND treatment_date BETWEEN (Now() - 14) AND (Now() - 1)
+      ORDER BY treatment_date",
+                                    
+      sep = "")
+                        
+  )
+                                    
+  
+  dfprintif(missed_pu,
+            norowmsg = "No LTBI pickups have been missed.")
+  
+  
+  ```
+  
+  
+  
+  
+  
+  </div>
+  
+  
+  
+  
+  
+  <div id="ptclass">
+  
+  <h2>Suspects Open for More Than 90 Days</h2>
+  ```{r overdue_suspects}
+  
+  # Query the Case Info records of suspects associated with our clinic
+  # Ignore any with a status set before 2007
+  suspects <- sqlQuery(plus, "
+  
+      SELECT person_id,
+             case_status,
+             current_status, 
+             current_status_date,
+               DATE() - current_status_date AS days_since_status,
+  		       case_manager
+      FROM Case_Info_View
+      WHERE current_status = '(Class 5 ) TB Suspect'
+          AND case_manager Is Not Null 
+          AND agency IN ('Denver Public Health - Metro TB Clinic', 'Select One')
+      ORDER BY case_manager, current_status_date
+                        
+  ")
+  
+  # Convert that dt to a date
+  suspects$current_status_date <- as.Date(suspects$current_status_date)
+  
+  
+  # Identify suspects to close
+  suspects$to_close <- FALSE
+  
+  # Suspects prior to 2007 can stay suspects, but should be closed
+  suspects$to_close[suspects$current_status_date < as.Date("2007-01-01") &
+                    suspects$case_status %in% "Open"] <- TRUE
+  
+  # Suspects with no status date should also be closed, if possible
+  suspects$to_close[is.na(suspects$current_status_date) &
+                    suspects$case_status %in% "Open"] <- TRUE
+  
+  # Finally, for cases after 2007, anyone suspected over 90 days should be reclassified
+  suspects$to_close[suspects$current_status_date >= as.Date("2007-01-01") &
+                    suspects$days_since_status > 90] <- TRUE
+  
+  
+  
+  # Subset to suspects to close, and drop the to_close column
+  suspects_to_close <- suspects[suspects$to_close, !names(suspects) %in% "to_close"]
+  
+  
+  dfprintif(suspects_to_close,
+            norowmsg = "No suspects have been open more than 90 days.")
+  
+  ```
+  
+  
+  
+  
+  </div>
+  
+  
+  
+  <div id="diagnostics">
+  
+  <h2>TSTs with Missing Results</h2>
+  ```{r tsts_missing_results}
+  
+  # Query TSTs either placed or read by our staff but without results
+  # Disregard tests placed before 2009
+  tsts_no_result <- sqlQuery(plus, "
+                   
+      SELECT person_id, date_given, date_read, tst_read_by, result
+      FROM TST_View
+      WHERE reader_affiliation = 'Denver Metro TB Clinic'
+          AND result = 'Select One'
+          AND date_given >= #2009-01-01#
+      ORDER BY tst_read_by, date_given
+                   
+  ")
+  
+  dfprintif(subset(tsts_no_result, as.Date(date_given) < (Sys.Date() - 3)),
+            norowmsg = "No TSTs are missing results at this time.")
+  
+  
+  ```
+  
+  
+  <h2>QFTs with Missing Results</h2>
+  ```{r qfts_missing_results}
+  
+  # Query the DPH QFTs
+  qfts_no_result <- sqlQuery(plus, "
+                   
+      SELECT person_id, lab, collection_date, result
+      FROM QFT_View
+      WHERE lab = 'Denver Public Health'
+          AND result = 'Select One'
+                   
+  ")
+  
+  # Convert the collection date
+  qfts_no_result$date_collected <- as.Date(qfts_no_result$collection_date, 
+                                           format = "%m/%d/%Y")
+  
+  
+  qfts_no_result_print <- subset(qfts_no_result,
+                                 subset = date_collected < (Sys.Date() - 2),
+                                 select = !names(qfts_no_result) %in% "collection_date"
+  )
+  
+  dfprintif(arrange(qfts_no_result_print, date_collected),
+            norowmsg = "No QFTs are missing results at this time.")
+  
+  
+  ```
+  
+  
+  
+  </div>
+  
+  
+  
+  <div id="encounters">
+  
+  
+  <h2>Clinical Encounters with No Staff Responsible</h2>
+  ```{r encounters_nostaff}
+  
+  # Query encounters with no staff responsible (clinical only - don't worry about admin)
+  no_staff <- sqlQuery(plus, "
+                       
+      SELECT person_id, eval_date, eval_category, updated_by
+      FROM Eval_View
+      WHERE staff_responsible Is Null
+          AND eval_category = 'Clinical'
+          AND updated_by IN (
+              SELECT staff_userid
+              FROM Def_staff
+              WHERE affiliation = 'Denver Metro TB Clinic'
+              )
+      ORDER BY updated_by, eval_date
+                       
+  ")
+  
+  dfprintif(no_staff,
+            norowmsg = "All encounters have a staff person recorded.")
+  
+  ```
+  
+  
+  
+  
+  
+  
+  <h2>Visits with No Location</h2>
+  ```{r no_location}
+  
+  # Query encounters with visit_location = 0 ("Select One").
+  # Only pull face-to-face encounters - that's eval_category = 'Clinical'
+  # Ignore the NAs - those are imported records that predate TBdb.
+  enc <- sqlQuery(plus, "
                   
-    SELECT t.person_id, c.current_class,  t.treat_plan_type, 
-           t.treat_plan_date, t.plan_author, t.plan_status
-    FROM Tx_Plan_View t LEFT OUTER JOIN Case_Info_View c
-    ON t.person_id = c.person_id
-    WHERE t.plan_status = 'Open'
-        AND author_affiliation = 'Denver Metro TB Clinic'
-                      
-")
-
-# Flag discordant class/plans
-plantypes$discordant <- FALSE
-
-# Any treatment plan for the uninfected
-plantypes$discordant[plantypes$current_class %in% c("Class 0", "Class 1") &
-                     plantypes$treat_plan_type %in% c("LTBI", "Active")] <- TRUE
-
-# Active plans for LTBI+
-plantypes$discordant[plantypes$current_class %in% "Class 2" &
-                     plantypes$treat_plan_type %in% "Active"] <- TRUE
-
-# LTBI and Window plans for active cases and suspects
-plantypes$discordant[plantypes$current_class %in% c("Class 3", "Class 5") &
-                     plantypes$treat_plan_type %in% c("LTBI", "Window")] <- TRUE
-
-
-#count(plantypes, c("current_class", "treat_plan_type", "discordant"))
-
-
-discordant <- subset(plantypes,
-                     subset = discordant,
-                     select = c("person_id", "current_class", "treat_plan_type", 
-                                "treat_plan_date", "plan_author", "plan_status")
-)
-
-
-dfprintif(arrange(discordant, current_class, treat_plan_type),
-          norowmsg = "All classifications and plans seem to match.")
-
-
-
-```
-
-
-## Patients with 2 or More Open Treatment Plans
-```{r multiplan}
-
-# Query the open plans by person_id
-open_plans <- sqlQuery(plus, "
-                      
-    SELECT person_id, treat_plan, treat_plan_date, plan_status
-    FROM Tx_Plan_View
-    WHERE plan_status = 'Open'
-        AND author_affiliation = 'Denver Metro TB Clinic'
-                      
-")
-
-# Identify any person with multiple plans
-multiplan_ids <- open_plans$person_id[duplicated(open_plans$person_id)]
-multiplans <- subset(open_plans, person_id %in% multiplan_ids)
-
-dfprintif(arrange(multiplans, person_id, treat_plan_date),
-          norowmsg = "No patients have more than one open plan.")
-
-
-```
-
-
-## Treatment Plans Open Longer Than Expected
-```{r plans_open_longer}
-
-# Query the treatment plans
-# Exclude plans prior to 2008
-long_plans <- sqlQuery(plus, "
+      SELECT person_id, eval_date, staff_responsible
+      FROM Eval_View
+      WHERE visit_location = 'Select One'
+          AND eval_category = 'Clinical'
+          AND eval_date >= #2011-01-01#
+          AND staff_affiliation = 'Denver Metro TB Clinic'
+      ORDER BY staff_responsible, eval_date
                   
-    SELECT person_id, plan_author, treat_plan_date,
-           treat_plan_type, ltbi_drug,
-           latest_tx, plan_status, reason_stopped
-    FROM Tx_Plan_View
-    WHERE author_affiliation = 'Denver Metro TB Clinic'
-        AND plan_status = 'Open'
-        AND treat_plan_date > #2008-01-01#
-                  
-")
-
-# Convert treat_plan_date to Date
-long_plans$treat_plan_date <- as.Date(long_plans$treat_plan_date)
-
-# Calculate how long each plan has been open
-long_plans$days_open <- Sys.Date() - long_plans$treat_plan_date
-
-# Flag those that have been open too long
-# Rifampin - more than 4 months
-# INH - more than 9 months
-# INH/Rifapentine - more than 12 weeks
-# Active - more than 12 months
-long_plans$open_too_long <- FALSE
-long_plans$open_too_long[long_plans$ltbi_drug %in% "RIF" & 
-                             long_plans$days_open > 124] <- TRUE
-
-long_plans$open_too_long[long_plans$ltbi_drug %in% "INH" & 
-                             long_plans$days_open > 279] <- TRUE
-
-long_plans$open_too_long[long_plans$ltbi_drug %in% "INH/Rifapentine" & 
-                             long_plans$days_open > 84] <- TRUE
-
-long_plans$open_too_long[long_plans$treat_plan_type %in% "Active" & 
-                             long_plans$days_open > 365] <- TRUE
-
-open_too_long <- subset(long_plans,
-                        subset = open_too_long,
-                        select = c("person_id", "plan_author",
-                                   "treat_plan_type", "ltbi_drug",
-                                   "treat_plan_date", "latest_tx",
-                                   "plan_status", "reason_stopped", "days_open"))
-
-
-
-dfprintif(arrange(open_too_long, plan_author, treat_plan_type, ltbi_drug, desc(days_open)),
-          norowmsg = "No plans have been open longer than expected.")
-
-
-
-```
-
-
-## Treatment Plans Closed Without Reason or End Date
-```{r closed_without}
-
-
-# Query the treatment plans
-# Every plan should have a reason stopped. They should all have a treatment ending date,
-# too, but to keep this list to a reasonable length I'll only pull completed plans that are
-# missing end dates.
-closed_without <- sqlQuery(plus, "
-                  
-    SELECT person_id, plan_author, treat_plan_date,
-           treat_plan, plan_status, reason_stopped,
-           treat_plan_end
-    FROM Tx_Plan_View
-    WHERE author_affiliation = 'Denver Metro TB Clinic'
-        AND plan_status = 'Closed'
-        AND (reason_stopped = 'Select One'
-             OR (reason_stopped = 'Course Completed'
-                 AND treat_plan_end Is Null
-             )
-        )
-    ORDER BY plan_author, treat_plan_date
-                  
-")
-
-
-dfprintif(closed_without,
-          norowmsg = "All closed treatment plans have end dates and reasons stopped.")
-
-
-```
-
-
-## Open Treatment Plans with Reason Stopped or End Date
-```{r open_with}
-
-
-# Query the treatment plans
-# Every plan with a reason stopped or an end date should be closed
-open_with <- sqlQuery(plus, "
-                  
-    SELECT person_id, plan_author, treat_plan_date,
-           treat_plan, plan_status, reason_stopped,
-           treat_plan_end
-    FROM Tx_Plan_View
-    WHERE author_affiliation = 'Denver Metro TB Clinic'
-        AND plan_status = 'Open'
-        AND (reason_stopped <> 'Select One'
-             OR treat_plan_end Is Not Null)
-    ORDER BY plan_author, treat_plan_date
-                  
-")
-
-
-dfprintif(arrange(open_with, reason_stopped),
-          norowmsg = "No open plans have end dates or reasons stopped.")
-
-
-```
-
-
-## Incomplete LTBI Pickups in the Past Fourteen Days
-```{r missed_pickups}
-
-# Query the missed LTBI pickups from the last fourteen days
-missed_pu <- sqlQuery(plus, paste("
-                                  
-    SELECT t.person_id, p.last_name, p.first_name, t.treatment_date
-    FROM Drug_Treatment t LEFT OUTER JOIN Person p
-    ON t.person_id = p.idnumber
-    WHERE dispense_type = 'Pickup'
-        AND completed = ''
-        AND treatment_date BETWEEN (Now() - 14) AND (Now() - 1)
-    ORDER BY treatment_date",
-                                  
-    sep = "")
-                      
-)
-                                  
-
-dfprintif(missed_pu,
-          norowmsg = "No LTBI pickups have been missed.")
-
-
-```
-
-
-
-## Suspects Open for More Than 90 Days
-```{r overdue_suspects}
-
-# Query the Case Info records of suspects associated with our clinic
-# Ignore any with a status set before 2007
-suspects <- sqlQuery(plus, "
-
-    SELECT person_id,
-           case_status,
-           current_status, 
-           current_status_date,
-             DATE() - current_status_date AS days_since_status,
-		       case_manager
-    FROM Case_Info_View
-    WHERE current_status = '(Class 5 ) TB Suspect'
-        AND case_manager Is Not Null 
-        AND agency IN ('Denver Public Health - Metro TB Clinic', 'Select One')
-    ORDER BY case_manager, current_status_date
-                      
-")
-
-# Convert that dt to a date
-suspects$current_status_date <- as.Date(suspects$current_status_date)
-
-
-# Identify suspects to close
-suspects$to_close <- FALSE
-
-# Suspects prior to 2007 can stay suspects, but should be closed
-suspects$to_close[suspects$current_status_date < as.Date("2007-01-01") &
-                  suspects$case_status %in% "Open"] <- TRUE
-
-# Suspects with no status date should also be closed, if possible
-suspects$to_close[is.na(suspects$current_status_date) &
-                  suspects$case_status %in% "Open"] <- TRUE
-
-# Finally, for cases after 2007, anyone suspected over 90 days should be reclassified
-suspects$to_close[suspects$current_status_date >= as.Date("2007-01-01") &
-                  suspects$days_since_status > 90] <- TRUE
-
-
-
-# Subset to suspects to close, and drop the to_close column
-suspects_to_close <- suspects[suspects$to_close, !names(suspects) %in% "to_close"]
-
-
-dfprintif(suspects_to_close,
-          norowmsg = "No suspects have been open more than 90 days.")
-
-```
-
-
-
-
-
-## TSTs with Missing Results
-```{r tsts_missing_results}
-
-# Query TSTs either placed or read by our staff but without results
-# Disregard tests placed before 2009
-tsts_no_result <- sqlQuery(plus, "
-                 
-    SELECT person_id, date_given, date_read, tst_read_by, result
-    FROM TST_View
-    WHERE reader_affiliation = 'Denver Metro TB Clinic'
-        AND result = 'Select One'
-        AND date_given >= #2009-01-01#
-    ORDER BY tst_read_by, date_given
-                 
-")
-
-dfprintif(subset(tsts_no_result, as.Date(date_given) < (Sys.Date() - 3)),
-          norowmsg = "No TSTs are missing results at this time.")
-
-
-```
-
-
-## QFTs with Missing Results
-```{r qfts_missing_results}
-
-# Query the DPH QFTs
-qfts_no_result <- sqlQuery(plus, "
-                 
-    SELECT person_id, lab, collection_date, result
-    FROM QFT_View
-    WHERE lab = 'Denver Public Health'
-        AND result = 'Select One'
-                 
-")
-
-# Convert the collection date
-qfts_no_result$date_collected <- as.Date(qfts_no_result$collection_date, 
-                                         format = "%m/%d/%Y")
-
-
-qfts_no_result_print <- subset(qfts_no_result,
-                               subset = date_collected < (Sys.Date() - 2),
-                               select = !names(qfts_no_result) %in% "collection_date"
-)
-
-dfprintif(arrange(qfts_no_result_print, date_collected),
-          norowmsg = "No QFTs are missing results at this time.")
-
-
-```
-
-
-
-
-
-
-## Clinical Encounters with No Staff Responsible
-```{r encounters_nostaff}
-
-# Query encounters with no staff responsible (clinical only - don't worry about admin)
-no_staff <- sqlQuery(plus, "
-                     
-    SELECT person_id, eval_date, eval_category, updated_by
-    FROM Eval_View
-    WHERE staff_responsible Is Null
-        AND eval_category = 'Clinical'
-        AND updated_by IN (
-            SELECT staff_userid
-            FROM Def_staff
-            WHERE affiliation = 'Denver Metro TB Clinic'
-            )
-    ORDER BY updated_by, eval_date
-                     
-")
-
-dfprintif(no_staff,
-          norowmsg = "All encounters have a staff person recorded.")
-
-```
-
-
-
-
-
-
-## Visits with No Location
-```{r no_location}
-
-# Query encounters with visit_location = 0 ("Select One").
-# Only pull face-to-face encounters - that's eval_category = 'Clinical'
-# Ignore the NAs - those are imported records that predate TBdb.
-enc <- sqlQuery(plus, "
-                
-    SELECT person_id, eval_date, staff_responsible
-    FROM Eval_View
-    WHERE visit_location = 'Select One'
-        AND eval_category = 'Clinical'
-        AND eval_date >= #2011-01-01#
-        AND staff_affiliation = 'Denver Metro TB Clinic'
-    ORDER BY staff_responsible, eval_date
-                
-")
-
-dfprintif(enc,
-          norowmsg = "All encounters have a location recorded.")
-
-
-```
-
-
-
-## Addresses with No County
-```{r no_county}
-
-# Query addresses with no county indicated
-# Ignore the really old ones
-# Colorado cities only
-no_county <- sqlQuery(plus, "
-                      
-    SELECT a.person_id, a.address, a.city, d.county,
-           a.updated_by, a.updated_date
-    FROM Addresses a LEFT OUTER JOIN Def_county d
-    ON a.county = d.county_of_residence
-    WHERE (d.county = 'Unknown'
-           OR d.county Is Null)
-        AND a.updated_date > #2010-01-01#
-        AND a.state = 'CO'
-        AND a.updated_by IN (
-            SELECT staff_userid
-            FROM Def_staff
-            WHERE affiliation = 'Denver Metro TB Clinic'
-            )
-    ORDER BY a.updated_by, a.updated_date
-
-")
-
-dfprintif(no_county,
-          norowmsg = "All addresses have a county recorded.")
-
-```
-
-
-
-
-
+  ")
+  
+  dfprintif(enc,
+            norowmsg = "All encounters have a location recorded.")
+  
+  
+  ```
+  
+  
+  </div>
+  
+  
+  <div id="locating">
+  
+  
+  <h2>Addresses with No County</h2>
+  ```{r no_county}
+  
+  # Query addresses with no county indicated
+  # Ignore the really old ones
+  # Colorado cities only
+  no_county <- sqlQuery(plus, "
+                        
+      SELECT a.person_id, a.address, a.city, d.county,
+             a.updated_by, a.updated_date
+      FROM Addresses a LEFT OUTER JOIN Def_county d
+      ON a.county = d.county_of_residence
+      WHERE (d.county = 'Unknown'
+             OR d.county Is Null)
+          AND a.updated_date > #2010-01-01#
+          AND a.state = 'CO'
+          AND a.updated_by IN (
+              SELECT staff_userid
+              FROM Def_staff
+              WHERE affiliation = 'Denver Metro TB Clinic'
+              )
+      ORDER BY a.updated_by, a.updated_date
+  
+  ")
+  
+  dfprintif(no_county,
+            norowmsg = "All addresses have a county recorded.")
+  
+  ```
+  
+  </div>
+
+
+</div>
 
 
 

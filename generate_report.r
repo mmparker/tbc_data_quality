@@ -13,8 +13,9 @@ library(markdown)
 # Knit it
 knit("data_quality.rmd")
 
-markdownToHTML(file = "data_quality.md",
-               output = "data_quality.html",
-               stylesheet = file.path("..", "css", "tb_report.css"))
+# markdownToHTML(file = "data_quality.md",
+#                output = "data_quality.html",
+#                stylesheet = file.path("..", "css", "tb_report.css"))
 
 
+system("pandoc data_quality.md -o data_quality.html")
