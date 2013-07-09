@@ -72,7 +72,7 @@ Updated at `r paste(Sys.time())`
 
   <div id="txplans">
   
-  <h2>Treatment Plan/Classification Mismatch</h2>
+## Treatment Plan/Classification Mismatch
   ```{r plan_class_mismatch}
   
   # Pull open plans
@@ -121,7 +121,7 @@ Updated at `r paste(Sys.time())`
   ```
   
   
-  <h2>Patients with 2 or More Open Treatment Plans</h2>
+## Patients with 2 or More Open Treatment Plans
   ```{r multiplan}
   
   # Query the open plans by person_id
@@ -145,7 +145,7 @@ Updated at `r paste(Sys.time())`
   ```
   
   
-  <h2>Treatment Plans Open Longer Than Expected</h2>
+## Treatment Plans Open Longer Than Expected
   ```{r plans_open_longer}
   
   # Query the treatment plans
@@ -203,7 +203,7 @@ Updated at `r paste(Sys.time())`
   ```
   
   
-  <h2>Treatment Plans Closed Without Reason or End Date</h2>
+## Treatment Plans Closed Without Reason or End Date
   ```{r closed_without}
   
   
@@ -236,7 +236,7 @@ Updated at `r paste(Sys.time())`
   ```
   
   
-  <h2>Open Treatment Plans with Reason Stopped or End Date</h2>
+## Open Treatment Plans with Reason Stopped or End Date
   ```{r open_with}
   
   
@@ -274,7 +274,7 @@ Updated at `r paste(Sys.time())`
   
   <div id="ptclass">
   
-  <h2>Suspects Open for More Than 90 Days</h2>
+## Suspects Open for More Than 90 Days
   ```{r overdue_suspects}
   
   # Query the Case Info records of suspects associated with our clinic
@@ -334,7 +334,7 @@ Updated at `r paste(Sys.time())`
   
   <div id="diagnostics">
   
-  <h2>TSTs with Missing Results</h2>
+## TSTs with Missing Results
   ```{r tsts_missing_results}
   
   # Query TSTs either placed or read by our staff but without results
@@ -357,7 +357,7 @@ Updated at `r paste(Sys.time())`
   ```
   
   
-  <h2>QFTs with Missing Results</h2>
+## QFTs with Missing Results
   ```{r qfts_missing_results}
   
   # Query the DPH QFTs
@@ -395,7 +395,7 @@ Updated at `r paste(Sys.time())`
   <div id="encounters">
   
   
-  <h2>Clinical Encounters with No Staff Responsible</h2>
+## Clinical Encounters with No Staff Responsible
   ```{r encounters_nostaff}
   
   # Query encounters with no staff responsible (clinical only - don't worry about admin)
@@ -424,7 +424,7 @@ Updated at `r paste(Sys.time())`
   
   
   
-  <h2>Visits with No Location</h2>
+## Visits with No Location
   ```{r no_location}
   
   # Query encounters with visit_location = 0 ("Select One").
@@ -455,7 +455,7 @@ Updated at `r paste(Sys.time())`
   <div id="locating">
   
   
-  <h2>Addresses with No County</h2>
+## Addresses with No County
   ```{r no_county}
   
   # Query addresses with no county indicated
