@@ -264,33 +264,6 @@ Updated at `r paste(Sys.time())`
   ```
   
   
-  <h2>Incomplete LTBI Pickups in the Past Fourteen Days</h2>
-  ```{r missed_pickups}
-  
-  # Query the missed LTBI pickups from the last fourteen days
-  missed_pu <- sqlQuery(plus, paste("
-                                    
-      SELECT t.person_id, p.last_name, p.first_name, t.treatment_date
-      FROM Drug_Treatment t LEFT OUTER JOIN Person p
-      ON t.person_id = p.idnumber
-      WHERE dispense_type = 'Pickup'
-          AND completed = ''
-          AND treatment_date BETWEEN (Now() - 14) AND (Now() - 1)
-      ORDER BY treatment_date",
-                                    
-      sep = "")
-                        
-  )
-                                    
-  
-  dfprintif(missed_pu,
-            norowmsg = "No LTBI pickups have been missed.")
-  
-  
-  ```
-  
-  
-  
   
   
   </div>
