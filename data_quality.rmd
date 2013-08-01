@@ -79,11 +79,12 @@ Updated at `r paste(Sys.time())`
   plantypes <- sqlQuery(plus, "
                     
       SELECT t.person_id, c.current_class,  t.treat_plan_type, 
-             t.treat_plan_date, t.plan_author, t.plan_status
+             t.treat_plan_date, t.case_manager, t.plan_status
       FROM Tx_Plan_View t LEFT OUTER JOIN Case_Info_View c
       ON t.person_id = c.person_id
       WHERE t.plan_status = 'Open'
-          AND author_affiliation = 'Denver Metro TB Clinic'
+          AND (case_manager_affiliation = 'Denver Metro TB Clinic'
+               OR author_affiliation = 'Denver Metro TB Clinic')
                         
   ")
   
@@ -109,7 +110,7 @@ Updated at `r paste(Sys.time())`
   discordant <- subset(plantypes,
                        subset = discordant,
                        select = c("person_id", "current_class", "treat_plan_type", 
-                                  "treat_plan_date", "plan_author", "plan_status")
+                                  "treat_plan_date", "case_manager", "plan_status")
   )
   
   
@@ -130,7 +131,8 @@ Updated at `r paste(Sys.time())`
       SELECT person_id, treat_plan, treat_plan_date, plan_status
       FROM Tx_Plan_View
       WHERE plan_status = 'Open'
-          AND author_affiliation = 'Denver Metro TB Clinic'
+          AND (case_manager_affiliation = 'Denver Metro TB Clinic'
+               OR author_affiliation = 'Denver Metro TB Clinic')
                         
   ")
   
@@ -152,11 +154,12 @@ Updated at `r paste(Sys.time())`
   # Exclude plans prior to 2008
   long_plans <- sqlQuery(plus, "
                     
-      SELECT person_id, plan_author, treat_plan_date,
+      SELECT person_id, case_manager, treat_plan_date,
              treat_plan_type, ltbi_drug,
              latest_tx, plan_status, reason_stopped
       FROM Tx_Plan_View
-      WHERE author_affiliation = 'Denver Metro TB Clinic'
+      WHERE (case_manager_affiliation = 'Denver Metro TB Clinic'
+             OR author_affiliation = 'Denver Metro TB Clinic')
           AND plan_status = 'Open'
           AND treat_plan_date > #2008-01-01#
                     
@@ -188,14 +191,14 @@ Updated at `r paste(Sys.time())`
   
   open_too_long <- subset(long_plans,
                           subset = open_too_long,
-                          select = c("person_id", "plan_author",
+                          select = c("person_id", "case_manager",
                                      "treat_plan_type", "ltbi_drug",
                                      "treat_plan_date", "latest_tx",
                                      "plan_status", "reason_stopped", "days_open"))
   
   
   
-  dfprintif(arrange(open_too_long, plan_author, treat_plan_type, ltbi_drug, desc(days_open)),
+  dfprintif(arrange(open_too_long, case_manager, treat_plan_type, ltbi_drug, desc(days_open)),
             norowmsg = "No plans have been open longer than expected.")
   
   
@@ -213,18 +216,19 @@ Updated at `r paste(Sys.time())`
   # missing end dates.
   closed_without <- sqlQuery(plus, "
                     
-      SELECT person_id, plan_author, treat_plan_date,
+      SELECT person_id, case_manager, treat_plan_date,
              treat_plan, plan_status, reason_stopped,
              treat_plan_end
       FROM Tx_Plan_View
-      WHERE author_affiliation = 'Denver Metro TB Clinic'
+      WHERE (case_manager_affiliation = 'Denver Metro TB Clinic'
+             OR author_affiliation = 'Denver Metro TB Clinic')
           AND plan_status = 'Closed'
           AND (reason_stopped = 'Select One'
                OR (reason_stopped = 'Course Completed'
                    AND treat_plan_end Is Null
                )
           )
-      ORDER BY plan_author, treat_plan_date
+      ORDER BY case_manager, treat_plan_date
                     
   ")
   
@@ -244,15 +248,16 @@ Updated at `r paste(Sys.time())`
   # Every plan with a reason stopped or an end date should be closed
   open_with <- sqlQuery(plus, "
                     
-      SELECT person_id, plan_author, treat_plan_date,
+      SELECT person_id, case_manager, treat_plan_date,
              treat_plan, plan_status, reason_stopped,
              treat_plan_end
       FROM Tx_Plan_View
-      WHERE author_affiliation = 'Denver Metro TB Clinic'
+      WHERE (case_manager_affiliation = 'Denver Metro TB Clinic'
+               OR author_affiliation = 'Denver Metro TB Clinic')
           AND plan_status = 'Open'
           AND (reason_stopped <> 'Select One'
                OR treat_plan_end Is Not Null)
-      ORDER BY plan_author, treat_plan_date
+      ORDER BY case_manager, treat_plan_date
                     
   ")
   
