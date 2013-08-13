@@ -368,10 +368,12 @@ Updated at `r paste(Sys.time())`
   # Query the DPH QFTs
   qfts_no_result <- sqlQuery(plus, "
                    
-      SELECT person_id, lab, collection_date, result
-      FROM QFT_View
-      WHERE lab = 'Denver Public Health'
-          AND result = 'Select One'
+      SELECT q.person_id, p.local_id AS mrn,
+             q.lab, q.collection_date, q.result
+      FROM QFT_View q LEFT OUTER JOIN Person p
+      ON q.person_id = p.idnumber
+      WHERE q.lab = 'Denver Public Health'
+          AND q.result = 'Select One'
                    
   ")
   
@@ -381,8 +383,8 @@ Updated at `r paste(Sys.time())`
   
   
   qfts_no_result_print <- subset(qfts_no_result,
-                                 subset = date_collected < (Sys.Date() - 2),
-                                 select = !names(qfts_no_result) %in% "collection_date"
+      subset = date_collected < (Sys.Date() - 2),
+      select = !names(qfts_no_result) %in% "collection_date"
   )
   
   dfprintif(arrange(qfts_no_result_print, date_collected),
