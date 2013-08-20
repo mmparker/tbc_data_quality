@@ -24,6 +24,7 @@ options(stringsAsFactors = FALSE)
 # Load the required libraries
 library(knitr)
 library(mpmisc)
+library(tbdbaid)
 library(RODBC)
 library(plyr)
 
