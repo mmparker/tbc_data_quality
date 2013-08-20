@@ -16,7 +16,7 @@
 </head>
 
 
-```{r setup, echo= FALSE, warning= FALSE}
+```{r setup, echo = FALSE, message = FALSE, warning = FALSE}
 
 # Strings ain't factors
 options(stringsAsFactors = FALSE)
