@@ -74,7 +74,7 @@ Updated at `r paste(Sys.time())`
   <div id="txplans">
   
 ## Treatment Plan/Classification Mismatch
-  ```{r plan_class_mismatch}
+```{r plan_class_mismatch}
   
   # Pull open plans
   plantypes <- sqlQuery(plus, "
@@ -120,11 +120,11 @@ Updated at `r paste(Sys.time())`
   
   
   
-  ```
+```
   
   
 ## Patients with 2 or More Open Treatment Plans
-  ```{r multiplan}
+```{r multiplan}
   
   # Query the open plans by person_id
   open_plans <- sqlQuery(plus, "
@@ -145,11 +145,11 @@ Updated at `r paste(Sys.time())`
             norowmsg = "No patients have more than one open plan.")
   
   
-  ```
+```
   
   
 ## Treatment Plans Open Longer Than Expected
-  ```{r plans_open_longer}
+```{r plans_open_longer}
   
   # Query the treatment plans
   # Exclude plans prior to 2008
@@ -204,11 +204,11 @@ Updated at `r paste(Sys.time())`
   
   
   
-  ```
+```
   
   
 ## Treatment Plans Closed Without Reason or End Date
-  ```{r closed_without}
+```{r closed_without}
   
   
   # Query the treatment plans
@@ -238,11 +238,11 @@ Updated at `r paste(Sys.time())`
             norowmsg = "All closed treatment plans have end dates and reasons stopped.")
   
   
-  ```
+```
   
   
 ## Open Treatment Plans with Reason Stopped or End Date
-  ```{r open_with}
+```{r open_with}
   
   
   # Query the treatment plans
@@ -267,7 +267,7 @@ Updated at `r paste(Sys.time())`
             norowmsg = "No open plans have end dates or reasons stopped.")
   
   
-  ```
+```
   
   
   
@@ -281,7 +281,7 @@ Updated at `r paste(Sys.time())`
   <div id="ptclass">
   
 ## Suspects Open for More Than 90 Days
-  ```{r overdue_suspects}
+```{r overdue_suspects}
   
   # Query the Case Info records of suspects associated with our clinic
   # Ignore any with a status set before 2007
@@ -329,7 +329,7 @@ Updated at `r paste(Sys.time())`
   dfprintif(suspects_to_close,
             norowmsg = "No suspects have been open more than 90 days.")
   
-  ```
+```
   
   
   
@@ -341,7 +341,7 @@ Updated at `r paste(Sys.time())`
   <div id="diagnostics">
   
 ## TSTs with Missing Results
-  ```{r tsts_missing_results}
+```{r tsts_missing_results}
   
   # Query TSTs either placed or read by our staff but without results
   # Disregard tests placed before 2009
@@ -360,11 +360,11 @@ Updated at `r paste(Sys.time())`
             norowmsg = "No TSTs are missing results at this time.")
   
   
-  ```
+```
   
   
 ## QFTs with Missing Results
-  ```{r qfts_missing_results}
+```{r qfts_missing_results}
   
   # Query the DPH QFTs
   qfts_no_result <- sqlQuery(plus, "
@@ -392,7 +392,7 @@ Updated at `r paste(Sys.time())`
             norowmsg = "No QFTs are missing results at this time.")
   
   
-  ```
+```
   
   
   
@@ -404,7 +404,7 @@ Updated at `r paste(Sys.time())`
   
   
 ## Clinical Encounters with No Staff Responsible
-  ```{r encounters_nostaff}
+```{r encounters_nostaff}
   
   # Query encounters with no staff responsible (clinical only - don't worry about admin)
   no_staff <- sqlQuery(plus, "
@@ -425,7 +425,7 @@ Updated at `r paste(Sys.time())`
   dfprintif(no_staff,
             norowmsg = "All encounters have a staff person recorded.")
   
-  ```
+```
   
   
   
@@ -433,7 +433,7 @@ Updated at `r paste(Sys.time())`
   
   
 ## Visits with No Location
-  ```{r no_location}
+```{r no_location}
   
   # Query encounters with visit_location = 0 ("Select One").
   # Only pull face-to-face encounters - that's eval_category = 'Clinical'
@@ -454,7 +454,7 @@ Updated at `r paste(Sys.time())`
             norowmsg = "All encounters have a location recorded.")
   
   
-  ```
+```
   
   
   </div>
@@ -464,7 +464,7 @@ Updated at `r paste(Sys.time())`
   
   
 ## Addresses with No County
-  ```{r no_county}
+```{r no_county}
   
   # Query addresses with no county indicated
   # Ignore the really old ones
@@ -491,7 +491,7 @@ Updated at `r paste(Sys.time())`
   dfprintif(no_county,
             norowmsg = "All addresses have a county recorded.")
   
-  ```
+```
   
   </div>
 
