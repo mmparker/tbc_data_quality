@@ -68,6 +68,7 @@ Updated at `r paste(Sys.time())`
     <li><a href="#diagnostics">Diagnostics</a></li>
     <li><a href="#encounters">Encounters</a></li>
     <li><a href="#locating">Locating Info</a></li>
+    <li><a href="#demographics">Demographics</a></li>
   </ul>
     
 
@@ -492,6 +493,38 @@ Updated at `r paste(Sys.time())`
             norowmsg = "All addresses have a county recorded.")
   
 ```
+  
+  </div>
+  
+  
+  
+  
+  <div id="txplans">
+  
+  
+## Patients with No Country of Birth
+  
+```{r no_birthco}
+
+# Query patients with no country of birth listed
+
+no_birthco <- sqlQuery(plus, "
+                       
+    SELECT person_id, mrn, birthco
+    FROM Demos_View
+    WHERE birthco IS NULL
+    AND person_id > 100000
+    ORDER BY mrn DESC
+                       
+")
+
+
+dfprintif(no_birthco,
+          norowmsg = "All patients have country of birth recorded.")
+
+
+```
+  
   
   </div>
 
