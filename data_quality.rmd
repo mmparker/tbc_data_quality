@@ -332,7 +332,33 @@ Updated at `r paste(Sys.time())`
   
 ```
   
-  
+
+
+## Patients Closed with No Current Classification
+
+```{r noclass}
+
+
+# I'm excluding open cases because there are nearly 6000 - but do they need to be
+# fixed, too?
+noclass <- sqlQuery(plus, "
+                    
+    SELECT person_id, current_class, case_status
+    FROM Case_Info_View
+    WHERE current_class IS NULL
+        AND agency = 'Denver Public Health - Metro TB Clinic'
+        AND case_status = 'Closed'
+                    
+")
+
+
+dfprintif(noclass,
+          norowmsg = "All closed patients have a classification.")
+
+
+```
+
+
   
   
 </div>
