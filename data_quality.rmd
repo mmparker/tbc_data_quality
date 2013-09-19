@@ -464,6 +464,7 @@ Updated at `r paste(Sys.time())`
   <div id="locating">
   
   
+  
 ## Addresses with No County
 ```{r no_county}
   
@@ -502,6 +503,54 @@ Updated at `r paste(Sys.time())`
   <div id="txplans">
   
   
+## Patients with Inconsistent Country of Birth and Immigrant Status
+
+
+```{r immi_vs_birthco}
+
+migrant <- sqlQuery(plus, "
+                         
+    SELECT person_id, mrn, birthco, immi_status
+    FROM Demos_View
+    WHERE birthco IS NOT NULL
+        AND birthco <> '<Select One>'
+                         
+")
+
+
+# Identify all US territories
+usterr <- c("United States", 
+            "Puerto Rico", 
+            "United States Minor Outlying Islands",
+            "Virgin Islands (U.S.)")
+
+# Identify non-immigrant status
+nonimmigrant <- c("Not Applicable (US born)", "Select One", NA)
+
+
+
+# Flag inconsistent combinations
+migrant$inconsistent <- NA
+
+# People born in the US with any kind of immigrant status
+migrant$inconsistent[migrant$birthco %in% usterr &
+                     !migrant$immi_status %in% nonimmigrant] <- "US-born Immigrant"
+
+
+# Not born in the US but indicated as a citizen
+migrant$inconsistent[!migrant$birthco %in% usterr &
+    migrant$immi_status %in% "Not Applicable (US born)"] <- "Foreign-born Native"
+
+migrantprob <- subset(migrant,
+                      subset = !is.na(inconsistent))
+
+dfprintif(arrange(migrantprob, inconsistent, birthco, immi_status),
+          norowmsg = "All patients have immigration statuses consistent with their country of birth.")
+
+
+```
+  
+  
 ## Patients with No Country of Birth
   
 ```{r no_birthco}
@@ -512,7 +561,7 @@ no_birthco <- sqlQuery(plus, "
                        
     SELECT person_id, mrn, birthco
     FROM Demos_View
-    WHERE birthco IS NULL
+    WHERE (birthco IS NULL OR birthco = '<Select One>')
     AND person_id > 100000
     ORDER BY mrn DESC
                        
