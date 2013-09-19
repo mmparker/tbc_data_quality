@@ -284,54 +284,110 @@ Updated at `r paste(Sys.time())`
 ## Suspects Open for More Than 90 Days
 ```{r overdue_suspects}
   
-  # Query the Case Info records of suspects associated with our clinic
-  # Ignore any with a status set before 2007
-  suspects <- sqlQuery(plus, "
+# Query the Case Info records of suspects associated with our clinic
+# Ignore any with a status set before 2007
+suspects <- sqlQuery(plus, "
   
-      SELECT person_id,
-             case_status,
-             current_status, 
-             current_status_date,
-               DATE() - current_status_date AS days_since_status,
-  		       case_manager
-      FROM Case_Info_View
-      WHERE current_status = '(Class 5 ) TB Suspect'
-          AND case_manager Is Not Null 
-          AND agency IN ('Denver Public Health - Metro TB Clinic', 'Select One')
-      ORDER BY case_manager, current_status_date
+    SELECT person_id,
+           case_status,
+           current_status, 
+           current_status_date,
+           DATE() - current_status_date AS days_since_status,
+  		   case_manager
+    FROM Case_Info_View
+    WHERE current_status = '(Class 5 ) TB Suspect'
+        AND case_manager Is Not Null 
+        AND agency IN ('Denver Public Health - Metro TB Clinic', 'Select One')
+    ORDER BY case_manager, current_status_date
                         
-  ")
+")
   
-  # Convert that dt to a date
-  suspects$current_status_date <- as.Date(suspects$current_status_date)
-  
-  
-  # Identify suspects to close
-  suspects$to_close <- FALSE
-  
-  # Suspects prior to 2007 can stay suspects, but should be closed
-  suspects$to_close[suspects$current_status_date < as.Date("2007-01-01") &
-                    suspects$case_status %in% "Open"] <- TRUE
-  
-  # Suspects with no status date should also be closed, if possible
-  suspects$to_close[is.na(suspects$current_status_date) &
-                    suspects$case_status %in% "Open"] <- TRUE
-  
-  # Finally, for cases after 2007, anyone suspected over 90 days should be reclassified
-  suspects$to_close[suspects$current_status_date >= as.Date("2007-01-01") &
-                    suspects$days_since_status > 90] <- TRUE
+# Convert that dt to a date
+suspects$current_status_date <- as.Date(suspects$current_status_date)
   
   
+# Identify suspects to close
+suspects$to_close <- FALSE
   
-  # Subset to suspects to close, and drop the to_close column
-  suspects_to_close <- suspects[suspects$to_close, !names(suspects) %in% "to_close"]
+# Suspects prior to 2007 can stay suspects, but should be closed
+suspects$to_close[suspects$current_status_date < as.Date("2007-01-01") &
+                  suspects$case_status %in% "Open"] <- TRUE
+  
+# Suspects with no status date should also be closed, if possible
+suspects$to_close[is.na(suspects$current_status_date) &
+                  suspects$case_status %in% "Open"] <- TRUE
+  
+# Finally, for cases after 2007, anyone suspected over 90 days should be reclassified
+suspects$to_close[suspects$current_status_date >= as.Date("2007-01-01") &
+                  suspects$days_since_status > 90] <- TRUE
   
   
-  dfprintif(suspects_to_close,
-            norowmsg = "No suspects have been open more than 90 days.")
+  
+# Subset to suspects to close, and drop the to_close column
+suspects_to_close <- suspects[suspects$to_close, !names(suspects) %in% "to_close"]
+  
+  
+dfprintif(suspects_to_close,
+          norowmsg = "No suspects have been open more than 90 days.")
+
   
 ```
   
+  
+## Patients with Pending Status for More Than 90 Days
+
+```{r pending}
+
+pending <- sqlQuery(plus, "
+  
+    SELECT person_id,
+           current_status, 
+           case_status,
+           current_status_date,
+           DATE() - current_status_date AS days_since_status,
+      	   case_manager
+    FROM Case_Info_View
+    WHERE current_status = 'Pending'
+        AND case_manager Is Not Null 
+        AND agency IN ('Denver Public Health - Metro TB Clinic', 'Select One')
+        AND current_status_date > #2007-01-01#
+    ORDER BY case_manager, current_status_date
+                        
+ ")
+
+
+
+
+# Convert that dt to a date
+pending$current_status_date <- as.Date(pending$current_status_date)
+  
+  
+# Identify pending to close
+pending$to_close <- FALSE
+  
+# pending prior to 2007 can stay pending, but should be closed
+pending$to_close[pending$current_status_date < as.Date("2007-01-01") &
+                  pending$case_status %in% "Open"] <- TRUE
+  
+# pending with no status date should also be closed, if possible
+pending$to_close[is.na(pending$current_status_date) &
+                  pending$case_status %in% "Open"] <- TRUE
+  
+# Finally, for cases after 2007, anyone pending over 90 days should be reclassified
+pending$to_close[pending$current_status_date >= as.Date("2007-01-01") &
+                  pending$days_since_status > 90] <- TRUE
+  
+  
+  
+# Subset to pending to close, and drop the to_close column
+pending_to_close <- pending[pending$to_close, !names(pending) %in% "to_close"]
+  
+  
+dfprintif(pending_to_close,
+          norowmsg = "No pending have been open more than 90 days.")
+
+
+```
 
 
 ## Patients Closed with No Current Classification
