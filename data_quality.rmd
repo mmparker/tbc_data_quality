@@ -270,10 +270,50 @@ Updated at `r paste(Sys.time())`
   
 ```
   
+
+
+
+## 'Window' Treatment Plans Lasting More Than 12 Weeks
+
+```{r long_window}
+
+
+# Query the treatment plans
+# Exclude plans prior to 2008
+long_window <- sqlQuery(plus, "
+            
+    SELECT person_id, case_manager, treat_plan, reason_stopped,
+           treat_plan_date, latest_tx
+    FROM Tx_Plan_View
+    WHERE (case_manager_affiliation = 'Denver Metro TB Clinic'
+           OR author_affiliation = 'Denver Metro TB Clinic')
+        AND reason_stopped = 'Window Tx Complete'
+        AND treat_plan_date > #2008-01-01#
+                    
+")
+  
+# Convert some dates to Date
+long_window$treat_plan_date <- as.Date(long_window$treat_plan_date)
+long_window$latest_tx <- as.Date(long_window$latest_tx)
+  
+
+# Calculate length of treatment
+long_window$length_of_tx <- long_window$latest_tx - long_window$treat_plan_date
+
+
+# Print any longer-than-expected plan
+dfprintif(subset(long_window, length_of_tx > 84),
+          norowmsg = "All window treatment plans were completed within twelve weeks.")
+
+
+```
+
+
+
+
   
   
-  
-  </div>
+</div>
   
   
   
