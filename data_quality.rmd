@@ -335,11 +335,11 @@ Updated at `r paste(Sys.time())`
   
   
   
-  </div>
+</div>
   
   
   
-  <div id="diagnostics">
+<div id="diagnostics">
   
 ## TSTs with Missing Results
 ```{r tsts_missing_results}
@@ -397,11 +397,11 @@ Updated at `r paste(Sys.time())`
   
   
   
-  </div>
+</div>
   
   
   
-  <div id="encounters">
+<div id="encounters">
   
   
 ## Clinical Encounters with No Staff Responsible
@@ -458,10 +458,10 @@ Updated at `r paste(Sys.time())`
 ```
   
   
-  </div>
+</div>
   
   
-  <div id="locating">
+<div id="locating">
   
   
   
@@ -495,12 +495,12 @@ Updated at `r paste(Sys.time())`
   
 ```
   
-  </div>
+</div>
   
   
   
   
-  <div id="txplans">
+<div id="demographics">
   
   
 ## Patients with Inconsistent Country of Birth and Immigrant Status
@@ -575,7 +575,7 @@ dfprintif(no_birthco,
 ```
   
   
-  </div>
+</div>
 
 
 </div>
