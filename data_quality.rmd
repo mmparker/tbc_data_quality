@@ -518,6 +518,30 @@ dfprintif(noclass,
 ```
   
   
+## Labs with No Accession Number
+
+```{r labs_no_accession}
+
+# Query the labs with no accession number
+myco_labs <- sqlQuery(plus, "
+                        
+    SELECT person_id, accession_number, collection_date
+    FROM Culture
+    WHERE originating_lab = 2
+        AND (accession_number = '' OR
+             accession_number IS NULL)
+        AND collection_date BETWEEN #2008-01-01# AND (Date() - 7)
+    ORDER BY collection_date
+                        
+")
+
+
+dfprintif(myco_labs,
+          norowmsg = "All lab specimens have some accession number listed.")
+
+
+```
+  
   
 </div>
   
