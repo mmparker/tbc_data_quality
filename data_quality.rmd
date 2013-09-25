@@ -474,7 +474,7 @@ dfprintif(noclass,
       FROM TST_View
       WHERE reader_affiliation = 'Denver Metro TB Clinic'
           AND result = 'Select One'
-          AND date_given >= #2009-01-01#
+          AND date_given >= #2008-01-01#
       ORDER BY tst_read_by, date_given
                    
   ")
