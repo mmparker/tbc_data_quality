@@ -525,8 +525,9 @@ dfprintif(noclass,
 # Query the labs with no accession number
 myco_labs <- sqlQuery(plus, "
                         
-    SELECT person_id, accession_number, collection_date
-    FROM Culture
+    SELECT c.person_id, d.mrn, c.accession_number, c.collection_date
+    FROM Culture c LEFT OUTER JOIN Demos_View d
+    ON c.person_id = d.person_id
     WHERE originating_lab = 2
         AND (accession_number = '' OR
              accession_number IS NULL)
@@ -534,6 +535,13 @@ myco_labs <- sqlQuery(plus, "
     ORDER BY collection_date
                         
 ")
+
+# Add an originating lab label
+myco_labs$originating_lab <- "Denver Public Health"
+
+# Convert things to character for tidier display
+myco_labs$mrn <- as.character(myco_labs$mrn)
+myco_labs$accession_number[is.na(myco_labs$accession_number)] <- "--"
 
 
 dfprintif(myco_labs,
