@@ -273,13 +273,13 @@ Updated at `r paste(Sys.time())`
 
 
 
-## 'Window' Treatment Plans Lasting More Than 12 Weeks
+## 'Window' Treatment Plans Lasting More Than 14 Weeks
 
 ```{r long_window}
 
 
 # Query the treatment plans
-# Exclude plans prior to 2008
+# Exclude plans started before 2008
 long_window <- sqlQuery(plus, "
             
     SELECT person_id, case_manager, treat_plan, reason_stopped,
@@ -302,7 +302,7 @@ long_window$length_of_tx <- long_window$latest_tx - long_window$treat_plan_date
 
 
 # Print any longer-than-expected plan
-dfprintif(subset(long_window, length_of_tx > 84),
+dfprintif(subset(long_window, length_of_tx > (7 * 14)),
           norowmsg = "All window treatment plans were completed within twelve weeks.")
 
 
@@ -536,8 +536,12 @@ myco_labs <- sqlQuery(plus, "
                         
 ")
 
+
 # Add an originating lab label
-myco_labs$originating_lab <- "Denver Public Health"
+# The is.na() indexing is strictly to avoid an error when there
+# are zero records - there must be a more elegant way around that
+myco_labs$originating_lab[is.na(myco_labs$accession_number)] <- 
+  "Denver Public Health"
 
 # Convert things to character for tidier display
 myco_labs$mrn <- as.character(myco_labs$mrn)
