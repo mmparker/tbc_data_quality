@@ -10,6 +10,10 @@ options(stringsAsFactors = FALSE)
 library(knitr)
 library(markdown)
 
+
+# Set the working directory
+setwd("G:\\StrategicArea\\TB_Program\\Administration\\Reports\\Data Quality")
+
 # Knit it
 knit("data_quality.rmd")
 
