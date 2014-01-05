@@ -518,6 +518,119 @@ dfprintif(noclass,
 ```
   
   
+## QFTs with Mismatched Results
+
+```{r qfts_mismatched}
+  
+  # Query the DPH QFTs from TBdb
+  # Patients whose results haven't been entered into TBdb should be covered
+  # by the above report, so I'm excluding them here
+  qfts_tbdb <- sqlQuery(plus, "
+                   
+      SELECT q.person_id, p.local_id AS mrn,
+             q.lab, q.collection_date, q.result
+      FROM QFT_View q LEFT OUTER JOIN Person p
+      ON q.person_id = p.idnumber
+      WHERE q.lab = 'Denver Public Health'
+          AND q.result <> 'Select One'
+                   
+  ")
+
+
+  # Query the QFTs from the DH Data Warehouse
+  qfts_dhdw <- subset(
+      query_dhdw_qfts(start_date = as.Date("2010-01-01"),
+                      stop_date = Sys.Date() - 14),
+      select = c("mrn", "qft_dt", "result")
+  )
+
+  
+  # Convert the collection dates
+  qfts_tbdb$date_collected <- as.Date(qfts_tbdb$collection_date, 
+                                      format = "%m/%d/%Y")
+
+  qfts_dhdw$date_collected <- as.Date(qfts_dhdw$qft_dt,
+                                      tz = "MST")
+
+  # Strip anything longer than 7 characters from the TBdb MRNs
+  qfts_tbdb$mrn <- substr(qfts_tbdb$mrn, 1, 7)
+
+  # Restore leading zeroes to MRNs
+  qfts_tbdb$mrn <- formatC(qfts_tbdb$mrn, width = 7, format = "d", flag = "0")
+  qfts_dhdw$mrn <- formatC(qfts_dhdw$mrn, width = 7, format = "d", flag = "0")
+
+
+
+
+  # Flag each record's origin
+  qfts_tbdb$origin <- "TBdb"
+  qfts_dhdw$origin <- "DHDW"
+
+  
+  # Merge the DHDW QFTs onto those from TBdb
+  # (Ideally this would be a full outer join, but I don't have a way to
+  # select just DPH QFTs from the DHDW yet)
+  qfts_compare <- merge(x = subset(qfts_tbdb, 
+                                   date_collected > as.Date("2010-01-01") &
+                                   date_collected < (Sys.Date() - 14)),
+                        y = qfts_dhdw,
+                        by = c("mrn", "date_collected"),
+                        all.x = TRUE,
+                        suffixes = c(".tbdb", ".dhdw")
+  )
+
+  # Subset to discordant tests
+  qfts_discordant <- subset(qfts_compare,
+                            subset = result.tbdb != result.dhdw,
+                            select = c("mrn", "person_id", "date_collected",
+                                       "result.tbdb", "result.dhdw")
+  )
+  
+
+# Pretty names
+names(qfts_discordant) <- c("MRN", "TBdb ID", "Date Collected",
+                                  "Result in TBdb", "Result in DHDW")
+
+# Print it
+dfprintif(arrange(qfts_discordant, `Date Collected`),
+          norowmsg = "All QFT results in TBdb appear to be consistent with their counterparts in the DH Data Warehouse.")
+  
+  
+```
+
+
+
+## QFTs Not Matched In the Data Warehouse
+
+Possible reasons:
+mismatched or missing MRN, 
+different dates in TBdb and LCR, 
+QFT not actually performed by DH lab
+
+[results coming soon]
+
+```{r qfts_not_in_dhdw}
+
+# Subset to QFTs with no match in the DH Data Warehouse
+qfts_missing_dhdw <- subset(qfts_compare, 
+                            subset = is.na(origin.dhdw) &
+                                     !result.tbdb %in% c("Not Done", "Select One"),
+                            select = c("mrn", "person_id", "date_collected",
+                                       "result.tbdb", "result.dhdw")
+)
+
+# Pretty names
+names(qfts_missing_dhdw) <- c("MRN", "TBdb ID", "Date Collected",
+                              "Result in TBdb", "Result in DHDW")
+
+# dfprintif(arrange(qfts_missing_dhdw, `Date Collected`),
+#           norowmsg = "All QFT results have a corresponding record in the DH Data Warehouse.")
+
+
+
+```
+  
+  
 ## Labs with No Accession Number
 
 ```{r labs_no_accession}
