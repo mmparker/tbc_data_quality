@@ -520,6 +520,8 @@ dfprintif(noclass,
   
 ## QFTs with Mismatched Results
 
+These QFTs have different results in TBdb than in the corresponding Data Warehouse record - check LCR.
+
 ```{r qfts_mismatched}
   
   # Query the DPH QFTs from TBdb
@@ -603,11 +605,11 @@ dfprintif(arrange(qfts_discordant, `Date Collected`),
 ## QFTs Not Matched In the Data Warehouse
 
 Possible reasons:
-mismatched or missing MRN, 
-different dates in TBdb and LCR, 
-QFT not actually performed by DH lab
 
-[results coming soon]
+ - MRN is missing from TBdb,
+ - MRN is different in TBdb and the Data Warehouse,
+ - different dates in TBdb and LCR, 
+ - QFT not actually performed by DH lab
 
 ```{r qfts_not_in_dhdw}
 
@@ -623,8 +625,8 @@ qfts_missing_dhdw <- subset(qfts_compare,
 names(qfts_missing_dhdw) <- c("MRN", "TBdb ID", "Date Collected",
                               "Result in TBdb", "Result in DHDW")
 
-# dfprintif(arrange(qfts_missing_dhdw, `Date Collected`),
-#           norowmsg = "All QFT results have a corresponding record in the DH Data Warehouse.")
+dfprintif(arrange(qfts_missing_dhdw, `Date Collected`),
+          norowmsg = "All QFT results have a corresponding record in the DH Data Warehouse.")
 
 
 
