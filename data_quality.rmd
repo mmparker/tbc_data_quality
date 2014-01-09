@@ -493,7 +493,7 @@ dfprintif(noclass,
   qfts_no_result <- sqlQuery(plus, "
                    
       SELECT q.person_id, p.local_id AS mrn,
-             q.lab, q.collection_date, q.result
+             q.lab, q.collection_date, q.result, q.last_updated_by
       FROM QFT_View q LEFT OUTER JOIN Person p
       ON q.person_id = p.idnumber
       WHERE q.lab = 'Denver Public Health'
@@ -508,7 +508,8 @@ dfprintif(noclass,
   
   qfts_no_result_print <- subset(qfts_no_result,
       subset = date_collected < (Sys.Date() - 2),
-      select = !names(qfts_no_result) %in% "collection_date"
+      select = c("person_id", "mrn", "date_collected",
+                 "lab", "result", "last_updated_by")
   )
   
   dfprintif(arrange(qfts_no_result_print, date_collected),
@@ -530,7 +531,7 @@ These QFTs have different results in TBdb than in the corresponding Data Warehou
   qfts_tbdb <- sqlQuery(plus, "
                    
       SELECT q.person_id, p.local_id AS mrn,
-             q.lab, q.collection_date, q.result
+             q.lab, q.collection_date, q.result, q.last_updated_by
       FROM QFT_View q LEFT OUTER JOIN Person p
       ON q.person_id = p.idnumber
       WHERE q.lab = 'Denver Public Health'
@@ -585,13 +586,15 @@ These QFTs have different results in TBdb than in the corresponding Data Warehou
   qfts_discordant <- subset(qfts_compare,
                             subset = result.tbdb != result.dhdw,
                             select = c("mrn", "person_id", "date_collected",
-                                       "result.tbdb", "result.dhdw")
+                                       "result.tbdb", "result.dhdw",
+                                       "last_updated_by")
   )
   
 
 # Pretty names
 names(qfts_discordant) <- c("MRN", "TBdb ID", "Date Collected",
-                                  "Result in TBdb", "Result in DHDW")
+                                  "Result in TBdb", "Result in DHDW",
+                                  "Last Updated By")
 
 # Print it
 dfprintif(arrange(qfts_discordant, `Date Collected`),
@@ -618,12 +621,14 @@ qfts_missing_dhdw <- subset(qfts_compare,
                             subset = is.na(origin.dhdw) &
                                      !result.tbdb %in% c("Not Done", "Select One"),
                             select = c("mrn", "person_id", "date_collected",
-                                       "result.tbdb", "result.dhdw")
+                                       "result.tbdb", "result.dhdw",
+                                       "last_updated_by")
 )
 
 # Pretty names
 names(qfts_missing_dhdw) <- c("MRN", "TBdb ID", "Date Collected",
-                              "Result in TBdb", "Result in DHDW")
+                              "Result in TBdb", "Result in DHDW",
+                              "Last Updated By")
 
 dfprintif(arrange(qfts_missing_dhdw, `Date Collected`),
           norowmsg = "All QFT results have a corresponding record in the DH Data Warehouse.")
