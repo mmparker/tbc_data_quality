@@ -638,6 +638,100 @@ dfprintif(arrange(qfts_missing_dhdw, `Date Collected`),
 ```
   
   
+## Patients with a Positive LTBI Test But No Follow-Up CXR
+
+
+```{r ltbi_no_cxr}
+
+# Query all the TSTs and QFTs
+tests <- subset(query_tests(start_date = as.Date("2008-01-01"),
+                            stop_date = Sys.Date()),
+                test %in% c("TST", "QFT"))
+
+
+# Pull in all chest x-rays - CXRs we've ordered come in with query_tests,
+# but CXRs from other places are valid here
+cxrs <- sqlQuery(plus, "
+                 
+    SELECT person_id, cxr_date_taken, cxr_lab
+    FROM CXR_View
+                 
+")
+
+
+# For each patient, identify those with a positive TST or QFT
+# (excluding a TST+ followed by a QFT-)
+# with no subsequent CXR
+screen_status <- ddply(tests, .var = "person_id", .fun = function(x) {
+    
+    
+    # Sort the tests
+    x.ord <- arrange(x[c("person_id", "test_date", "test", "result")],
+                     desc(test_date))
+
+    # Does this person have a valid positive test?
+    # Get the most recent one
+    latest.pos <- head(x.ord[x.ord$test %in% c("TST", "QFT") &
+                             x.ord$result %in% "Positive", ], 
+                       1)
+
+    
+    # Do they have a subsequent negative test?
+    subsequent.neg <- subset(x.ord,
+                             subset = test_date > latest.pos$test_date &
+                                      test %in% c("TST", "QFT") &
+                                      result %in% "Negative")
+
+
+    # Do they have a CXR?
+    subsequent.cxr <- subset(cxrs, person_id %in% x$person_id)
+    
+    
+    # Build the results
+    results <- data.frame(person_id = x$person_id[1],
+                          postest = NA,
+                          posdate = NA,
+                          refuted = NA,
+                          cxr = NA)
+    
+    if(nrow(latest.pos) > 0) {
+        results$postest <- latest.pos$test
+        results$posdate <- latest.pos$test_date
+    }
+    
+    results$refuted <- nrow(subsequent.neg) > 0
+    results$cxr <- nrow(subsequent.cxr) > 0
+    
+    results
+
+})
+
+
+# Convert dates back to Dates
+screen_status$posdate <- as.Date(screen_status$posdate,
+                                 origin = as.Date("1970-01-01"))
+
+# Flag those with positive tests and no subsequent results
+ltbi_no_cxr <- subset(screen_status,
+                      subset = !is.na(postest) &
+                               cxr %in% FALSE &
+                               refuted %in% FALSE,
+                      select = c("person_id", "postest", "posdate")
+)
+
+
+names(ltbi_no_cxr) <- c("TBdb ID", "Latest Positive Test", "Test Date")
+
+
+dfprintif(arrange(ltbi_no_cxr, `Test Date`))
+
+
+
+```
+  
+  
+  
+  
 ## Labs with No Accession Number
 
 ```{r labs_no_accession}
