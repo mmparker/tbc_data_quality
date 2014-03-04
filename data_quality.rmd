@@ -321,7 +321,8 @@ dfprintif(subset(long_window, length_of_tx > (7 * 14)),
   
   <div id="ptclass">
   
-## Suspects Open for More Than 90 Days
+## Patients Classified as Suspects for More Than 90 Days
+
 ```{r overdue_suspects}
   
 # Query the Case Info records of suspects associated with our clinic
