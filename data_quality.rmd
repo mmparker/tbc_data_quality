@@ -645,6 +645,7 @@ dfprintif(arrange(qfts_missing_dhdw, `Date Collected`),
   
 ## Patients with a Positive LTBI Test But No Follow-Up CXR
 
+Excludes patients with a closed case status
 
 ```{r ltbi_no_cxr}
 
@@ -716,11 +717,29 @@ screen_status <- ddply(tests, .var = "person_id", .fun = function(x) {
 screen_status$posdate <- as.Date(screen_status$posdate,
                                  origin = as.Date("1970-01-01"))
 
+
+# Assume that those with closed cases were correctly closed and show
+# only open cases
+case_status <- sqlQuery(plus, "
+                        
+    SELECT person_id, case_status
+    FROM Case_Info_View
+    
+")
+
+screen_status_open <- merge(x = screen_status,
+                            y = case_status,
+                            by = "person_id",
+                            all.x = TRUE)
+
+
+
 # Flag those with positive tests and no subsequent results
-ltbi_no_cxr <- subset(screen_status,
+ltbi_no_cxr <- subset(screen_status_open,
                       subset = !is.na(postest) &
                                cxr %in% FALSE &
-                               refuted %in% FALSE,
+                               refuted %in% FALSE &
+                               case_status %in% c("Pending", "Open"),
                       select = c("person_id", "postest", "posdate")
 )
 
