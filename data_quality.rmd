@@ -530,7 +530,8 @@ These QFTs have different results in TBdb than in the corresponding Data Warehou
   # by the above report, so I'm excluding them here
   qfts_tbdb <- sqlQuery(plus, "
                    
-      SELECT q.person_id, p.local_id AS mrn,
+      SELECT q.quantiferonid,
+             q.person_id, p.local_id AS mrn,
              q.lab, q.collection_date, q.result, q.last_updated_by
       FROM QFT_View q LEFT OUTER JOIN Person p
       ON q.person_id = p.idnumber
@@ -619,11 +620,15 @@ Possible reasons:
 # Subset to QFTs with no match in the DH Data Warehouse
 qfts_missing_dhdw <- subset(qfts_compare, 
                             subset = is.na(origin.dhdw) &
-                                     !result.tbdb %in% c("Not Done", "Select One"),
-                            select = c("mrn", "person_id", "date_collected",
+                                     !result.tbdb %in% c("Not Done",
+                                                         "Select One") &
+                                     !duplicated(quantiferonid),
+                            select = c("quantiferonid",
+                                       "mrn", "person_id", "date_collected",
                                        "result.tbdb", "result.dhdw",
                                        "last_updated_by")
 )
+
 
 # Pretty names
 names(qfts_missing_dhdw) <- c("MRN", "TBdb ID", "Date Collected",
